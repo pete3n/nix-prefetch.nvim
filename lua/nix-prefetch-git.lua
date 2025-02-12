@@ -119,15 +119,31 @@ M.get_repo_info = function(git_info)
     'nix-prefetch-git --no-deepClone --fetch-submodules %s 2>/dev/null | jq \'{ rev, hash }\'',
     url
   )
-  print("Running command: " .. cmd)
 
-  local output = vim.fn.system(cmd)
-  if vim.v.shell_error ~= 0 then
-    print("Error running nix-prefetch-git: " .. output)
+	local output_lines = {}
+  local job_id = vim.fn.jobstart(cmd, {
+    stdout_buffered = true,
+    on_stdout = function(_, data, _)
+      if data then
+        for _, line in ipairs(data) do
+          table.insert(output_lines, line)
+        end
+      end
+    end,
+    on_stderr = function(_, data, _)
+      -- Optionally, log stderr if needed.
+    end,
+  })
+
+  local ret = vim.fn.jobwait({ job_id }, M.cfg.timeout)
+  if ret[1] ~= 0 then
+    print("Error running nix-prefetch-git or timed out:")
+    print(table.concat(output_lines, "\n"))
     return nil
   end
 
-  -- Optionally, if extraneous output still exists, you can try to extract the JSON substring:
+	local output = table.concat(output_lines, "\n")
+  -- In case extra output exists, extract the JSON substring.
   local json_start = output:find("{")
   local json_end = output:find("}", json_start)
   if json_start and json_end then
@@ -135,6 +151,8 @@ M.get_repo_info = function(git_info)
   end
 
   local result = vim.fn.json_decode(output)
+  print("Updated repo info:")
+  print(vim.inspect(result))
   return result
 end
 
