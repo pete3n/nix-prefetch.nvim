@@ -59,8 +59,11 @@ M.get_cur_blk_coords = function()
 	return nil
 end
 
-M.debug_raw_query_results = function(fetch_block_node)
+M.parse_fetch_block = function(fetch_block_node)
   local buf = vim.api.nvim_get_current_buf()
+  local block_text = vim.treesitter.get_node_text(fetch_block_node, buf)
+  print("DEBUG: fetch_block node text:\n" .. block_text)
+
   local query_str = [[
     (binding
       (attrpath (identifier) @key)
@@ -69,27 +72,49 @@ M.debug_raw_query_results = function(fetch_block_node)
     (#match? @key "^(owner|repo|rev|hash)$")
   ]]
   local query = vim.treesitter.query.parse("nix", query_str)
-  local raw_results = {}
+  print("DEBUG: Running query:")
+  print(query_str)
+
+  local result = {}
+  local match_count = 0
+
+  -- Iterate over all matches in the fetch block node.
   for _, captures, _ in query:iter_matches(fetch_block_node, buf, 0, -1) do
-    table.insert(raw_results, captures)
-  end
-  print("Raw query results (using vim.inspect):")
-  print(vim.inspect(raw_results))
-  print("Detailed per-match output:")
-  for i, match in ipairs(raw_results) do
-    print("Match #" .. i)
-    for idx, node in ipairs(match) do
-      local text = vim.treesitter.get_node_text(node, buf)
-      print(string.format("  Capture index %d: %s", idx, text))
+    match_count = match_count + 1
+
+    local key_node, value_node
+    -- Iterate over the capture indices.
+    for i, node in ipairs(captures) do
+      local capture_name = query.captures[i]
+      if capture_name == "key" then
+        key_node = node
+      elseif capture_name == "value" then
+        value_node = node
+      end
+    end
+
+    if key_node and value_node then
+      local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
+      local value_text = vim.trim(vim.treesitter.get_node_text(value_node, buf))
+      print(string.format("DEBUG: Match #%d", match_count))
+      print("  Capture key: " .. key_text)
+      print("  Capture value: " .. value_text)
+      result[key_text] = value_text
+    else
+      print(string.format("DEBUG: Match #%d missing key or value", match_count))
     end
   end
+
+  print("DEBUG: Final result:")
+  print(vim.inspect(result))
+  return result
 end
 
 M.get_attrs = function()
   -- Use select(1, ...) to get just the node (not all return values).
   local node = select(1, M.get_cur_blk_coords())
   if node then
-    M.debug_raw_query_results(node)
+    M.parse_fetch_block(node)
   else
     print("No fetch block node found.")
   end
