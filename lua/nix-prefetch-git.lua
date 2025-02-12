@@ -111,19 +111,26 @@ M.get_repo_info = function(git_info)
   local repo  = git_info.repo
   local url = "https://github.com/" .. owner .. "/" .. repo
 
-  -- Construct the shell command.
-  -- Notice that we do not pass a rev argument so that nix-prefetch-git fetches the latest commit.
+  -- Build the command without providing a rev so that nix-prefetch-git
+  -- fetches the latest commit. We redirect stderr to /dev/null to suppress
+  -- non-JSON output.
   local cmd = string.format(
-    'nix-prefetch-git --no-deepClone --fetch-submodules %s | jq \'{ rev, hash }\'',
+    'nix-prefetch-git --no-deepClone --fetch-submodules %s 2>/dev/null | jq \'{ rev, hash }\'',
     url
   )
   print("Running command: " .. cmd)
 
-  -- Run the command and capture its output.
   local output = vim.fn.system(cmd)
   if vim.v.shell_error ~= 0 then
     print("Error running nix-prefetch-git: " .. output)
     return nil
+  end
+
+  -- Optionally, if extraneous output still exists, you can try to extract the JSON substring:
+  local json_start = output:find("{")
+  local json_end = output:find("}", json_start)
+  if json_start and json_end then
+    output = output:sub(json_start, json_end)
   end
 
   local result = vim.fn.json_decode(output)
