@@ -1,4 +1,4 @@
-# nix-prefetch-git.nvim
+# nix-prefetch.nvim
 
 _This is a story about Pete_
 
@@ -14,7 +14,7 @@ then copies the hash-mismatch error message and pastes it back into his config, 
 - _Pete does this alot <img src="assets/alot.png" alt="Icon" style="width: 16px; height: auto;">
 because he is bad at developing software._
 
-_Don't be like Pete, use NPG nvim!_
+_Don't be like Pete, use nix-prefetch.nvim!_
 
 ## Future Development
 - [x] fetchFromGitHub: update rev and hash
