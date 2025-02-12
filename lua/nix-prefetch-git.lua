@@ -96,15 +96,18 @@ M.parse_fetch_block = function(fetch_block_node)
     if key_node and value_node then
       local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
       local value_text = vim.trim(vim.treesitter.get_node_text(value_node, buf))
+			value_text = value_text:gsub('^"(.*)"$', "%1")
+
       print(string.format("DEBUG: Match #%d", match_count))
       print("  Capture key: " .. key_text)
       print("  Capture value: " .. value_text)
       result[key_text] = value_text
+
     else
       print(string.format("DEBUG: Match #%d missing key or value", match_count))
     end
   end
-
+	
   print("DEBUG: Final result:")
   print(vim.inspect(result))
   return result
