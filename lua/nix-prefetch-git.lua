@@ -155,7 +155,7 @@ M.get_repo_info = function(git_info)
     print("Error: nix-prefetch-git command timed out after " .. M.cfg.timeout .. "ms.")
     return nil
 	elseif ret[1] ~= 0 then
-    print("Error running nix-prefetch-git or timed out:")
+    print("Error running nix-prefetch-git:")
     print(table.concat(output_lines, "\n"))
     return nil
   end
@@ -205,7 +205,7 @@ M.update_repo_info = function()
     print("Could not parse attributes.")
     return
   end
-	
+
 	-- Don't update values if they are already current
 	if current_attrs.rev == new_info.rev and current_attrs.hash == new_info.hash then
 		print(current_attrs.owner .. "/" .. current_attrs.repo .. " -- rev and hash already latest.")
