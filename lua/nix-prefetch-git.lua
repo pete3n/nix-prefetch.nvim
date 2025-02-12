@@ -66,9 +66,8 @@ M.parse_fetch_block = function(fetch_block_node)
 
   local query_str = [[
     (binding
-      (attrpath
-        (_) @key)
-      (string_expression (string_fragment) @value)
+      (attrpath (identifier) @key)
+      (string_expression) @value
     )
     (#match? @key "^(owner|repo|rev|hash)$")
   ]]
@@ -89,6 +88,8 @@ M.parse_fetch_block = function(fetch_block_node)
       print(string.format("DEBUG: Match #%d", match_count))
       print("  Capture key: " .. key_text)
       print("  Capture value: " .. value_text)
+      -- Optionally remove surrounding quotes from the value:
+      value_text = value_text:gsub('^"(.*)"$', "%1")
       result[key_text] = value_text
     else
       print(string.format("DEBUG: Match #%d missing key or value", match_count))
@@ -99,7 +100,6 @@ M.parse_fetch_block = function(fetch_block_node)
   print(vim.inspect(result))
   return result
 end
-
 
 M.get_attrs = function()
 	local node, _, _, _, _ = M.get_cur_blk_coords()
