@@ -2,14 +2,15 @@ local M = {}
 
 M.cfg = {
 	ts_query_str = [[
-  (apply_expression
-    (select_expression
-      (attrpath (identifier) @fetchName
-        (#eq? @fetchName "fetchFromGitHub"))
-    )
-    (attrset_expression) @fetchBlock
-  )
-]],
+		(apply_expression
+			(select_expression
+				(attrpath (identifier) @fetchName
+					(#eq? @fetchName "fetchFromGitHub"))
+			)
+			(attrset_expression) @fetchBlock
+		)
+	]],
+	timeout = 5000,
 }
 
 M.ts_query = function()
@@ -134,8 +135,6 @@ M.get_repo_info = function(git_info)
   end
 
   local result = vim.fn.json_decode(output)
-  print("Updated repo info:")
-  print(vim.inspect(result))
   return result
 end
 
@@ -145,20 +144,71 @@ M.update_repo_info = function()
 		print("No git attributes found. Aborting update.")
 		return nil
 	end
-  print("Current repo attributes:")
-  print(vim.inspect(attrs))
 
-  -- Run nix-prefetch-git (via get_repo_info) to get the updated rev and hash.
   local new_info = M.get_repo_info(attrs)
   if not new_info then
-    print("Failed to update repo info.")
+    print("Failed to retrieve updated repo info.")
     return nil
   end
 
-  print("New repo info received:")
+	local bufnr = vim.api.nvim_get_current_buf()
+  local node = select (1, M.get_cur_blk_coords())
+  if not node then
+    print("Fetch block not found.")
+    return
+  end
+
+  -- Parse the current attributes from the block.
+  local current_attrs = M.parse_fetch_block(node)
+  if not current_attrs then
+    print("Could not parse fetch block attributes.")
+    return
+  end
+
+  print("Current attributes:")
+  print(vim.inspect(current_attrs))
+  print("New repo info:")
   print(vim.inspect(new_info))
-  -- At this point, you could update your file's fetch block with the new rev and hash.
-  return new_info
+
+  -- We'll update only the rev and hash. We need to find their nodes.
+  -- You can create a query to match individual bindings in the fetch block.
+  local buf = bufnr
+  local query_str = [[
+    (binding
+      (attrpath (identifier) @key)
+      (string_expression) @value
+    )
+    (#match? @key "^(rev|hash)$")
+  ]]
+  local query = vim.treesitter.query.parse("nix", query_str)
+
+  for _, captures, _ in query:iter_matches(node, buf, 0, -1) do
+    for i, cap in ipairs(captures) do
+      local capture_name = query.captures[i]
+      if capture_name == "key" then
+        local key_text = vim.trim(vim.treesitter.get_node_text(cap, buf))
+        if key_text == "rev" or key_text == "hash" then
+          -- Now get the corresponding value node.
+          local value_node = captures[query.captures["value"]]
+          -- If that didn't work, iterate to match based on capture index.
+          for j, node in ipairs(captures) do
+            if query.captures[j] == "value" then
+              value_node = node
+            end
+          end
+          if value_node then
+            local s, sc, e, ec = value_node:range()
+            local new_val = new_info[key_text]  -- new_info.rev or new_info.hash
+            -- Surround the new value with quotes.
+            new_val = '"' .. new_val .. '"'
+            -- Update the buffer.
+            vim.api.nvim_buf_set_text(buf, s, sc, e, ec, { new_val })
+          end
+        end
+      end
+    end
+  end
+  print("File updated with new repo info!")
 end
 
 return M
