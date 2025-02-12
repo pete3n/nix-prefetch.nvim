@@ -72,9 +72,16 @@ M.parse_fetch_block = function(fetch_block_node)
   local result = {}
 
   for _, captures, _ in query:iter_matches(fetch_block_node, buf, 0, -1) do
-    local key = vim.treesitter.get_node_text(captures[query.captures.key], buf)
-    local value = vim.treesitter.get_node_text(captures[query.captures.value], buf)
+    local key_node = captures[query.captures.key]
+    local value_node = captures[query.captures.value]
+    if not (key_node and value_node) then
+      -- skip this match if either capture is missing
+      goto continue
+    end
+    local key = vim.treesitter.get_node_text(key_node, buf)
+    local value = vim.treesitter.get_node_text(value_node, buf)
     result[key] = value
+    ::continue::
   end
 
   return result
