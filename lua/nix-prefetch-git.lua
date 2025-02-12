@@ -1,7 +1,7 @@
 local M = {}
 
 M.cfg = {
-	ts_query_str = [[
+	ts_qry_github_str = [[
 		(apply_expression
 			(select_expression
 				(attrpath (identifier) @fetchName
@@ -10,11 +10,30 @@ M.cfg = {
 			(attrset_expression) @fetchBlock
 		)
 	]],
+
+	ts_qry_git_attrs_str = [[
+    (binding
+      (attrpath (identifier) @key)
+      (string_expression) @value
+    )
+    (#match? @key "^(owner|repo|rev|hash)$")
+  ]],
+
+	ts_qry_origin_repo_str = [[
+    (binding
+      (attrpath (identifier) @key)
+      (string_expression) @value
+    )
+    (#match? @key "^(rev|hash)$")
+  ]],
+
 	timeout = 5000,
 }
 
-M.ts_query = function()
-	local query = vim.treesitter.query.parse("nix", M.cfg.ts_query_str)
+-- Locate available github attribute sets
+-- TODO: Add support for other git sources
+M.ts_query_github_attrs = function()
+	local query = vim.treesitter.query.parse("nix", M.cfg.ts_qry_github_str)
 	if not query then
 		print("Failed to parse fetchFromGitHub")
 		return nil
@@ -22,13 +41,15 @@ M.ts_query = function()
 	return query
 end
 
+-- We need to identify the attribute set to modify based on the cursor location
+-- Only modify an attribute set if the cursor falls in its range
 M.get_cur_blk_coords = function()
 	local bufnr = vim.api.nvim_get_current_buf()
 	local cursor = vim.api.nvim_win_get_cursor(0)
 	local cur_row = cursor[1] - 1 -- convert to 0-indexed
 	local cur_col = cursor[2]
 
-	local query = M.ts_query()
+	local query = M.ts_query_github_attrs()
 	if not query then
 		return nil
 	end
@@ -60,16 +81,10 @@ M.get_cur_blk_coords = function()
 	return nil
 end
 
+-- We need to parse the attributes for the Github set and format them to JSON
 M.parse_fetch_block = function(fetch_block_node)
   local buf = vim.api.nvim_get_current_buf()
-  local query_str = [[
-    (binding
-      (attrpath (identifier) @key)
-      (string_expression) @value
-    )
-    (#match? @key "^(owner|repo|rev|hash)$")
-  ]]
-  local query = vim.treesitter.query.parse("nix", query_str)
+  local query = vim.treesitter.query.parse("nix", M.cfg.ts_qry_git_attrs_str)
   local result = {}
   local match_count = 0
 
@@ -103,18 +118,16 @@ M.get_attrs = function()
 		local attrs = M.parse_fetch_block(node)
 		return attrs
   else
-    print("No fetch block node found.")
+    print("No fetchFromGithub attribute sets found.")
   end
 end
 
+-- We need to pull the current repo to check for updated rev and hash info
 M.get_repo_info = function(git_info)
   local owner = git_info.owner
   local repo  = git_info.repo
   local url = "https://github.com/" .. owner .. "/" .. repo
 
-  -- Build the command without providing a rev so that nix-prefetch-git
-  -- fetches the latest commit. We redirect stderr to /dev/null to suppress
-  -- non-JSON output.
   local cmd = string.format(
     'nix-prefetch-git --no-deepClone --fetch-submodules %s 2>/dev/null | jq \'{ rev, hash }\'',
     url
@@ -129,9 +142,6 @@ M.get_repo_info = function(git_info)
           table.insert(output_lines, line)
         end
       end
-    end,
-    on_stderr = function(_, data, _)
-      -- Optionally, log stderr if needed.
     end,
   })
 
@@ -151,8 +161,6 @@ M.get_repo_info = function(git_info)
   end
 
   local result = vim.fn.json_decode(output)
-  print("Updated repo info:")
-  print(vim.inspect(result))
   return result
 end
 
@@ -172,33 +180,24 @@ M.update_repo_info = function()
 	local bufnr = vim.api.nvim_get_current_buf()
   local node = select (1, M.get_cur_blk_coords())
   if not node then
-    print("Fetch block not found.")
+    print("fetchFromGithub attributes not found.")
     return
   end
 
-  -- Parse the current attributes from the block.
   local current_attrs = M.parse_fetch_block(node)
   if not current_attrs then
-    print("Could not parse fetch block attributes.")
+    print("Could not parse attributes.")
     return
   end
+	
+	-- Don't update values if they are already current
+	if current_attrs.rev == new_info.rev and current_attrs.hash == new_info.hash then
+		print(current_attrs.owner .. "/" .. current_attrs.repo .. " -- rev and hash already latest.")
+		return
+	end
 
-  print("Current attributes:")
-  print(vim.inspect(current_attrs))
-  print("New repo info:")
-  print(vim.inspect(new_info))
-
-  -- We'll update only the rev and hash. We need to find their nodes.
-  -- You can create a query to match individual bindings in the fetch block.
   local buf = bufnr
-  local query_str = [[
-    (binding
-      (attrpath (identifier) @key)
-      (string_expression) @value
-    )
-    (#match? @key "^(rev|hash)$")
-  ]]
-  local query = vim.treesitter.query.parse("nix", query_str)
+  local query = vim.treesitter.query.parse("nix", M.cfg.ts_qry_origin_repo_str)
 
   for _, captures, _ in query:iter_matches(node, buf, 0, -1) do
     for i, cap in ipairs(captures) do
@@ -206,27 +205,25 @@ M.update_repo_info = function()
       if capture_name == "key" then
         local key_text = vim.trim(vim.treesitter.get_node_text(cap, buf))
         if key_text == "rev" or key_text == "hash" then
-          -- Now get the corresponding value node.
-          local value_node = captures[query.captures["value"]]
-          -- If that didn't work, iterate to match based on capture index.
-          for j, node in ipairs(captures) do
+					local value_node = nil
+          for j, cap_node in ipairs(captures) do
             if query.captures[j] == "value" then
-              value_node = node
+              value_node = cap_node
             end
           end
           if value_node then
-            local s, sc, e, ec = value_node:range()
+            local s_row, s_col, e_row, e_col = value_node:range()
             local new_val = new_info[key_text]  -- new_info.rev or new_info.hash
             -- Surround the new value with quotes.
             new_val = '"' .. new_val .. '"'
             -- Update the buffer.
-            vim.api.nvim_buf_set_text(buf, s, sc, e, ec, { new_val })
+            vim.api.nvim_buf_set_text(buf, s_row, s_col, e_row, e_col, { new_val })
           end
         end
       end
     end
   end
-  print("File updated with new repo info!")
+  print("Updated " .. attrs.owner .. "/" .. attrs.repo .. " rev and hash")
 end
 
 return M
