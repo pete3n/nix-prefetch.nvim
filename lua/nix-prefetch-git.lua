@@ -64,7 +64,7 @@ M.parse_fetch_block = function(fetch_block_node)
   local query_str = [[
     (binding
       (attrpath (identifier) @key)
-      (string_expression (string_fragment) @value)
+      (_) @value
     )
     (#match? @key "^(owner|repo|rev|hash)$")
   ]]
