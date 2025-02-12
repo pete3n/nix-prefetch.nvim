@@ -1,3 +1,7 @@
+if vim.fn.exists(":checkhealth") == 2 then
+	require("nix-prefetch-git.health")
+end
+
 local M = {}
 
 M.cfg = {
