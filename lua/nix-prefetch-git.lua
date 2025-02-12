@@ -69,13 +69,23 @@ M.parse_fetch_block = function(fetch_block_node)
     (#match? @key "^(owner|repo|rev|hash)$")
   ]]
   local query = vim.treesitter.query.parse("nix", query_str)
+  print("DEBUG: Running query:")
+  print(query_str)
+
   local result = {}
 
   for _, captures, _ in query:iter_matches(fetch_block_node, buf, 0, -1) do
+    print("DEBUG: Found a match:")
+    for id, node in pairs(captures) do
+      local capture_name = query.captures[id]
+      local node_text = vim.treesitter.get_node_text(node, buf)
+      print(string.format("  capture %s: %s", capture_name, node_text))
+    end
+
     local key_node = captures[query.captures.key]
     local value_node = captures[query.captures.value]
     if not (key_node and value_node) then
-      -- skip this match if either capture is missing
+      print("DEBUG: Missing key or value capture, skipping this match.")
       goto continue
     end
     local key = vim.treesitter.get_node_text(key_node, buf)
@@ -83,6 +93,9 @@ M.parse_fetch_block = function(fetch_block_node)
     result[key] = value
     ::continue::
   end
+
+  print("DEBUG: Final result from query:")
+  print(vim.inspect(result))
 
   return result
 end
