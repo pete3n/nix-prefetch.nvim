@@ -59,11 +59,8 @@ M.get_cur_blk_coords = function()
 	return nil
 end
 
-M.parse_fetch_block = function(fetch_block_node)
+M.get_attrs = function(fetch_block_node)
   local buf = vim.api.nvim_get_current_buf()
-  local block_text = vim.treesitter.get_node_text(fetch_block_node, buf)
-  print("DEBUG: fetch_block node text:\n" .. block_text)
-
   local query_str = [[
     (binding
       (attrpath (identifier) @key)
@@ -72,43 +69,12 @@ M.parse_fetch_block = function(fetch_block_node)
     (#match? @key "^(owner|repo|rev|hash)$")
   ]]
   local query = vim.treesitter.query.parse("nix", query_str)
-  print("DEBUG: Running query:")
-  print(query_str)
-
-  local result = {}
-  local match_count = 0
-
+  local raw_results = {}
   for _, captures, _ in query:iter_matches(fetch_block_node, buf, 0, -1) do
-    match_count = match_count + 1
-    local key_node = captures[query.captures.key]
-    local value_node = captures[query.captures.value]
-    if key_node and value_node then
-      local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
-      local value_text = vim.trim(vim.treesitter.get_node_text(value_node, buf))
-      print(string.format("DEBUG: Match #%d", match_count))
-      print("  Capture key: " .. key_text)
-      print("  Capture value: " .. value_text)
-      -- Optionally remove surrounding quotes from the value:
-      value_text = value_text:gsub('^"(.*)"$', "%1")
-      result[key_text] = value_text
-    else
-      print(string.format("DEBUG: Match #%d missing key or value", match_count))
-    end
+    table.insert(raw_results, captures)
   end
-
-  print("DEBUG: Final result:")
-  print(vim.inspect(result))
-  return result
-end
-
-M.get_attrs = function()
-	local node, _, _, _, _ = M.get_cur_blk_coords()
-	if node then
-		local attrs = M.parse_fetch_block(node)
-		print(vim.inspect(attrs))
-		-- attrs now is a table like:
-		-- { owner = "pete3n", repo = "ninjection.nvim", rev = " ", hash = "sha256-GyXyIgZ3mdCVH4/7suRRN9+o+hQpDqJoboT69VxKMkY=" }
-	end
+  print("Raw query results:")
+  print(vim.inspect(raw_results))
 end
 
 return M
