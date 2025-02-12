@@ -66,7 +66,8 @@ M.parse_fetch_block = function(fetch_block_node)
 
   local query_str = [[
     (binding
-      (attrpath (attr) @key)
+      (attrpath
+        (_) @key)
       (string_expression (string_fragment) @value)
     )
     (#match? @key "^(owner|repo|rev|hash)$")
@@ -98,6 +99,7 @@ M.parse_fetch_block = function(fetch_block_node)
   print(vim.inspect(result))
   return result
 end
+
 
 M.get_attrs = function()
 	local node, _, _, _, _ = M.get_cur_blk_coords()
