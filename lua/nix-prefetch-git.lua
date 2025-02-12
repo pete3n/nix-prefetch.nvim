@@ -72,18 +72,13 @@ M.parse_fetch_block = function(fetch_block_node)
     (#match? @key "^(owner|repo|rev|hash)$")
   ]]
   local query = vim.treesitter.query.parse("nix", query_str)
-  print("DEBUG: Running query:")
-  print(query_str)
-
   local result = {}
   local match_count = 0
 
-  -- Iterate over all matches in the fetch block node.
   for _, captures, _ in query:iter_matches(fetch_block_node, buf, 0, -1) do
     match_count = match_count + 1
 
     local key_node, value_node
-    -- Iterate over the capture indices.
     for i, node in ipairs(captures) do
       local capture_name = query.captures[i]
       if capture_name == "key" then
@@ -97,24 +92,14 @@ M.parse_fetch_block = function(fetch_block_node)
       local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
       local value_text = vim.trim(vim.treesitter.get_node_text(value_node, buf))
 			value_text = value_text:gsub('^"(.*)"$', "%1")
-
-      print(string.format("DEBUG: Match #%d", match_count))
-      print("  Capture key: " .. key_text)
-      print("  Capture value: " .. value_text)
       result[key_text] = value_text
-
-    else
-      print(string.format("DEBUG: Match #%d missing key or value", match_count))
     end
   end
-	
-  print("DEBUG: Final result:")
-  print(vim.inspect(result))
+
   return result
 end
 
 M.get_attrs = function()
-  -- Use select(1, ...) to get just the node (not all return values).
   local node = select(1, M.get_cur_blk_coords())
   if node then
     M.parse_fetch_block(node)
@@ -122,5 +107,32 @@ M.get_attrs = function()
     print("No fetch block node found.")
   end
 end
+
+M.update_repo_info = function(repo_info)
+  local owner = repo_info.owner
+  local repo  = repo_info.repo
+  local url = "https://github.com/" .. owner .. "/" .. repo
+
+  -- Construct the shell command.
+  -- Notice that we do not pass a rev argument so that nix-prefetch-git fetches the latest commit.
+  local cmd = string.format(
+    'nix-prefetch-git --no-deepClone --fetch-submodules %s | jq \'{ rev, hash }\'',
+    url
+  )
+  print("Running command: " .. cmd)
+
+  -- Run the command and capture its output.
+  local output = vim.fn.system(cmd)
+  if vim.v.shell_error ~= 0 then
+    print("Error running nix-prefetch-git: " .. output)
+    return nil
+  end
+
+  local result = vim.fn.json_decode(output)
+  print("Updated repo info:")
+  print(vim.inspect(result))
+  return result
+end
+
 
 return M
