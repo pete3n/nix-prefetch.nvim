@@ -61,9 +61,6 @@ end
 
 M.parse_fetch_block = function(fetch_block_node)
   local buf = vim.api.nvim_get_current_buf()
-  local block_text = vim.treesitter.get_node_text(fetch_block_node, buf)
-  print("DEBUG: fetch_block node text:\n" .. block_text)
-
   local query_str = [[
     (binding
       (attrpath (identifier) @key)
@@ -102,15 +99,16 @@ end
 M.get_attrs = function()
   local node = select(1, M.get_cur_blk_coords())
   if node then
-    M.parse_fetch_block(node)
+		local attrs = M.parse_fetch_block(node)
+		return attrs
   else
     print("No fetch block node found.")
   end
 end
 
-M.update_repo_info = function(repo_info)
-  local owner = repo_info.owner
-  local repo  = repo_info.repo
+M.get_repo_info = function(git_info)
+  local owner = git_info.owner
+  local repo  = git_info.repo
   local url = "https://github.com/" .. owner .. "/" .. repo
 
   -- Construct the shell command.
@@ -134,5 +132,26 @@ M.update_repo_info = function(repo_info)
   return result
 end
 
+M.update_repo_info = function()
+	local attrs = M.get_attrs()
+	if not attrs then
+		print("No git attributes found. Aborting update.")
+		return nil
+	end
+  print("Current repo attributes:")
+  print(vim.inspect(attrs))
+
+  -- Run nix-prefetch-git (via get_repo_info) to get the updated rev and hash.
+  local new_info = M.get_repo_info(attrs)
+  if not new_info then
+    print("Failed to update repo info.")
+    return nil
+  end
+
+  print("New repo info received:")
+  print(vim.inspect(new_info))
+  -- At this point, you could update your file's fetch block with the new rev and hash.
+  return new_info
+end
 
 return M
