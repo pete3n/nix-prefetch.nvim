@@ -61,6 +61,10 @@ end
 
 M.parse_fetch_block = function(fetch_block_node)
   local buf = vim.api.nvim_get_current_buf()
+  -- Print the entire fetch block text for verification:
+  local block_text = vim.treesitter.get_node_text(fetch_block_node, buf)
+  print("DEBUG: fetch_block node text:\n" .. block_text)
+
   local query_str = [[
     (binding
       (attrpath (identifier) @key)
@@ -73,28 +77,29 @@ M.parse_fetch_block = function(fetch_block_node)
   print(query_str)
 
   local result = {}
-  local count = 0
+  local match_count = 0
 
   for _, captures, _ in query:iter_matches(fetch_block_node, buf, 0, -1) do
-    count = count + 1
-    print("DEBUG: Found match #" .. count)
+    match_count = match_count + 1
     local key_node = captures[query.captures.key]
     local value_node = captures[query.captures.value]
     if key_node and value_node then
-      local key_text = vim.treesitter.get_node_text(key_node, buf)
-      local value_text = vim.treesitter.get_node_text(value_node, buf)
-      print(string.format("  Capture key: %s", key_text))
-      print(string.format("  Capture value: %s", value_text))
+      local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
+      local value_text = vim.trim(vim.treesitter.get_node_text(value_node, buf))
+      print(string.format("DEBUG: Match #%d", match_count))
+      print("  Capture key: " .. key_text)
+      print("  Capture value: " .. value_text)
       result[key_text] = value_text
     else
-      print("DEBUG: Missing key or value capture, not adding to result.")
+      print(string.format("DEBUG: Match #%d missing key or value", match_count))
     end
   end
 
-  print("DEBUG: Final result from query:")
+  print("DEBUG: Final result:")
   print(vim.inspect(result))
   return result
 end
+
 
 M.get_attrs = function()
 	local node, _, _, _, _ = M.get_cur_blk_coords()
