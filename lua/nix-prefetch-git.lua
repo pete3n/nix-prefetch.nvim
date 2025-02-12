@@ -146,18 +146,30 @@ M.get_repo_info = function(git_info)
   })
 
   local ret = vim.fn.jobwait({ job_id }, M.cfg.timeout)
-  if ret[1] ~= 0 then
+  if ret[1] == -1 then
+		vim.fn.jobstop(job_id)
+    print("Error: nix-prefetch-git command timed out after " .. M.cfg.timeout .. "ms.")
+    return nil
+	elseif ret[1] ~= 0 then
     print("Error running nix-prefetch-git or timed out:")
     print(table.concat(output_lines, "\n"))
     return nil
   end
 
 	local output = table.concat(output_lines, "\n")
+	if output == "" then
+		print("No output from nix-prefetch-git.")
+    return nil
+  end
+
   -- In case extra output exists, extract the JSON substring.
   local json_start = output:find("{")
   local json_end = output:find("}", json_start)
   if json_start and json_end then
     output = output:sub(json_start, json_end)
+	else
+		print("Failed to locate JSON output in command response.")
+		return nil
   end
 
   local result = vim.fn.json_decode(output)
