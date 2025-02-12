@@ -73,8 +73,16 @@ M.debug_raw_query_results = function(fetch_block_node)
   for _, captures, _ in query:iter_matches(fetch_block_node, buf, 0, -1) do
     table.insert(raw_results, captures)
   end
-  print("Raw query results:")
+  print("Raw query results (using vim.inspect):")
   print(vim.inspect(raw_results))
+  print("Detailed per-match output:")
+  for i, match in ipairs(raw_results) do
+    print("Match #" .. i)
+    for idx, node in ipairs(match) do
+      local text = vim.treesitter.get_node_text(node, buf)
+      print(string.format("  Capture index %d: %s", idx, text))
+    end
+  end
 end
 
 M.get_attrs = function()
