@@ -59,7 +59,7 @@ M.get_cur_blk_coords = function()
 	return nil
 end
 
-M.get_attrs = function(fetch_block_node)
+M.debug_raw_query_results = function(fetch_block_node)
   local buf = vim.api.nvim_get_current_buf()
   local query_str = [[
     (binding
@@ -75,6 +75,16 @@ M.get_attrs = function(fetch_block_node)
   end
   print("Raw query results:")
   print(vim.inspect(raw_results))
+end
+
+M.get_attrs = function()
+  -- Use select(1, ...) to get just the node (not all return values).
+  local node = select(1, M.get_cur_blk_coords())
+  if node then
+    M.debug_raw_query_results(node)
+  else
+    print("No fetch block node found.")
+  end
 end
 
 return M
