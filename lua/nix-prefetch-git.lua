@@ -1,5 +1,5 @@
 if vim.fn.exists(":checkhealth") == 2 then
-	require("nix-prefetch-git.health")
+	require("nix-prefetch-git.health").check()
 end
 
 local M = {}
