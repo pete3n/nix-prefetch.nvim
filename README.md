@@ -19,9 +19,8 @@ _Don't be like Pete, use nix-prefetch.nvim!_
 ## Future Development
 - [x] fetchFromGitHub: update rev and hash
     - [ ] fetchFromGithub: preserve rev, update hash
+    - [ ] sha256 attribute support
+    - [ ] version tag interpretation/support
 - [ ] fetchFromGitLab support
 - [ ] fetchurl support 
 - [ ] fetchzip support 
-- [ ]  sha256 attribute support
-
-
