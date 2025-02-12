@@ -3,7 +3,7 @@ local health = require("vim.health")
 local M = {}
 
 function M.check()
-  health.report_start("nix-prefetch-git.nvim Health Check")
+  health.start("nix-prefetch-git.nvim Health Check")
 
   -- Check for external binary: jq
   if vim.fn.executable("jq") == 1 then
