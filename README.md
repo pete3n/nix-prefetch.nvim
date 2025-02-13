@@ -16,6 +16,28 @@ because he is bad at developing software._
 
 _Don't be like Pete, use nix-prefetch.nvim!_
 
+## Current Support
+nix-prefetch.nvim is currently limited to fetFromGitHub attribute sets using a rev
+and hash value (See [Future Development](#Future-Development) for planned features). As an example of a
+supported format, this is the code block to include nix-prefetch.nvim in your Nixvim config:
+```
+  extraPlugins = [
+    (pkgs.vimUtils.buildVimPlugin {
+      name = "nix-prefetch.nvim";
+      src = pkgs.fetchFromGitHub {
+        owner = "pete3n";
+        repo = "nix-prefetch.nvim";
+        rev = "44496fb3e706c795e87d475d674708919a01cbea";
+        hash = "sha256-tSDIGbTD+5fm1Qo3922DGJ1YIRNAUJF2btWf4kWbCoM=";
+      };
+    })
+  ];
+```
+This will register the NGUpdateRepo command which you can keybind.
+If you call NGUpdate repo with the cursor in a fetchFromGitHub attribute set, 
+then it will check for the most recent revision, and if it is different from the
+current, then it will update the revision and the corresponding hash.
+
 ## Future Development
 - [x] fetchFromGitHub: update rev and hash
     - [ ] fetchFromGithub: preserve rev, update hash
