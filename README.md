@@ -34,7 +34,7 @@ supported format, this is the code block to include nix-prefetch.nvim in your Ni
   ];
 ```
 This will register the NGUpdateRepo command which you can keybind.
-If you call NGUpdate repo with the cursor in a fetchFromGitHub attribute set, 
+If you call NGUpdateRepo with the cursor in a fetchFromGitHub attribute set, 
 then it will check for the most recent revision, and if it is different from the
 current, updates the revision and the corresponding hash.
 
