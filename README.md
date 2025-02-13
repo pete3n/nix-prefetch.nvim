@@ -17,7 +17,7 @@ because he is bad at developing software._
 _Don't be like Pete, use nix-prefetch.nvim!_
 
 ## Current Support
-nix-prefetch.nvim is currently limited to fetFromGitHub attribute sets using a rev
+nix-prefetch.nvim is currently limited to fetchFromGitHub attribute sets using a rev
 and hash value (See [Future Development](#Future-Development) for planned features). As an example of a
 supported format, this is the code block to include nix-prefetch.nvim in your Nixvim config:
 ```
@@ -36,7 +36,7 @@ supported format, this is the code block to include nix-prefetch.nvim in your Ni
 This will register the NGUpdateRepo command which you can keybind.
 If you call NGUpdate repo with the cursor in a fetchFromGitHub attribute set, 
 then it will check for the most recent revision, and if it is different from the
-current, then it will update the revision and the corresponding hash.
+current, updates the revision and the corresponding hash.
 
 ## Future Development
 - [x] fetchFromGitHub: update rev and hash
