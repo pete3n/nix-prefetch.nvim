@@ -38,6 +38,14 @@ If you call NGUpdateRepo with the cursor in a fetchFromGitHub attribute set,
 then it will check for the most recent revision, and if it is different from the
 current, updates the revision and the corresponding hash.
 
+## Dependencies
+[nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) must be installed, 
+jq and nix-prefetch-git must be executable and available in your path. You can run:
+```
+    :checkhealth nix-prefetch
+```
+to confirm your dependencies are available.
+
 ## Future Development
 - [x] fetchFromGitHub: update rev and hash
     - [ ] fetchFromGithub: preserve rev, update hash
