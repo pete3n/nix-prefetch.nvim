@@ -39,12 +39,13 @@ then it will check for the most recent revision, and if it is different from the
 current, updates the revision and the corresponding hash.
 
 ## Dependencies
-[nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) must be installed, 
-jq and nix-prefetch-git must be executable and available in your path. You can run:
+[nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) must be installed.
+jq, and nix-prefetch-git must be executable and available in your path. To confirm
+dependencies are availabe, nix-prefetch includes a health check function that 
+you can run from the nvim commandline with:
 ```
     :checkhealth nix-prefetch
 ```
-to confirm your dependencies are available.
 
 ## Future Development
 - [x] fetchFromGitHub: update rev and hash
