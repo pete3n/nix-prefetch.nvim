@@ -180,7 +180,8 @@ M.get_repo_info = function(git_info)
   return result
 end
 
-M.update_repo_info = function()
+---@param preserve_rev boolean
+M.update_repo_info = function(preserve_rev)
 	local attrs = M.get_attrs()
 	if not attrs then
 		print("No git attributes found. Aborting update.")
@@ -220,7 +221,7 @@ M.update_repo_info = function()
       local capture_name = query.captures[i]
       if capture_name == "key" then
         local key_text = vim.trim(vim.treesitter.get_node_text(cap, buf))
-        if key_text == "rev" or key_text == "hash" then
+        if (key_text == "rev" and preserve_rev == false) or key_text == "hash" then
 					local value_node = nil
           for j, cap_node in ipairs(captures) do
             if query.captures[j] == "value" then
@@ -239,7 +240,11 @@ M.update_repo_info = function()
       end
     end
   end
-  print("Updated " .. attrs.owner .. "/" .. attrs.repo .. " rev and hash")
+	if (preserve_rev) then
+		print("Updated " .. attrs.owner .. "/" .. attrs.repo .. " hash")
+	else
+		print("Updated " .. attrs.owner .. "/" .. attrs.repo .. " rev and hash")
+	end
 end
 
 return M
