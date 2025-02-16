@@ -31,6 +31,14 @@ M.cfg = {
     (#match? @key "^(rev|hash)$")
   ]],
 
+	ts_qry_origin_hash_str = [[
+    (binding
+      (attrpath (identifier) @key)
+      (string_expression) @value
+    )
+    (#match? @key "^hash$")
+  ]],
+
 	timeout = 5000,
 }
 
@@ -182,6 +190,7 @@ end
 
 ---@param preserve_rev boolean
 M.update_repo_info = function(preserve_rev)
+	local query = nil
 	local attrs = M.get_attrs()
 	if not attrs then
 		print("No git attributes found. Aborting update.")
@@ -213,8 +222,16 @@ M.update_repo_info = function(preserve_rev)
 		return
 	end
 
+	if preserve_rev and current_attrs.hash == new_info.hash then
+		print(current_attrs.owner .. "/" .. current_attrs.repo .. " -- hash already latest for rev.")
+	end
+
   local buf = bufnr
-  local query = vim.treesitter.query.parse("nix", M.cfg.ts_qry_origin_repo_str)
+	if not preserve_rev then
+		query = vim.treesitter.query.parse("nix", M.cfg.ts_qry_origin_repo_str)
+	else
+		query = vim.treesitter.query.parse("nix", M.cfg.ts_qry_origin_hash_str)
+	end
 
   for _, captures, _ in query:iter_matches(node, buf, 0, -1) do
     for i, cap in ipairs(captures) do
