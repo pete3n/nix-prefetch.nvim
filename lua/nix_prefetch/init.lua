@@ -101,6 +101,10 @@ function nix_prefetch.update(opts)
   -- Optional: notify start
   vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
 
+	print("DEBUG: bufnr " .. bufnr)
+	print("DEBUG: range " .. vim.inspect(range))
+	print("DEBUG: attrs " .. vim.inspect(attrs))
+
   -- Start async git prefetch
   nix_prefetch.prefetch_git(attrs, opts, function(result)
     if not result then
