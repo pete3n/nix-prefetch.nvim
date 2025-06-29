@@ -174,7 +174,16 @@ local function _get_attrs_dict(fetch_node)
 		end
 	end
 
-	return attrs_dict
+	if attrs_dict then
+		return attrs_dict, nil
+	else
+		---@type string
+		local err = "nix_prefetch.parse._get_attrs_dict() warning: No valid git attributes found."
+		if cfg.debug then
+			vim.notify(err, vim.log.levels.WARN)
+		end
+		return nil, err
+	end
 end
 
 ---@tag parse.get_node_pair()
