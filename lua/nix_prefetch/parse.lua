@@ -11,7 +11,7 @@ local ts = vim.treesitter
 --- TODO: Add support for other git sources
 ---@return vim.treesitter.Query? query, string? err
 local function _get_fetch_query()
-	---@type vim.treesitter.Query, string?
+	---@type vim.treesitter.Query?, string?
 	local query, qry_err = vim.treesitter.query.parse("nix", cfg.queries.fetch_from_github)
 	if not query then
 		---@type string
@@ -21,6 +21,7 @@ local function _get_fetch_query()
 		end
 		return nil, err
 	end
+	---@cast query vim.treesitter.Query
 
 	return query, nil
 end
@@ -144,8 +145,6 @@ local function _get_attrs_dict(fetch_node, bufnr)
 		return nil, err
 	end
 
-	vim.notify("Children of fetch_node:", vim.log.levels.INFO)
-
 	for i = 0, fetch_node:child_count() - 1 do
 		---@type TSNode?
 		local child = fetch_node:child(i)
@@ -160,6 +159,7 @@ local function _get_attrs_dict(fetch_node, bufnr)
 		-- vim.notify(string.format("  [%d] type = %s, text = %s", i, child_type, child_text), vim.log.levels.INFO)
 
 		if child_type == "binding_set" then
+			---@type table<integer, TSNode[]>
 			for _, match, _ in attrs_query:iter_matches(child, bufnr, 0, -1) do
 				---@type TSNode|nil
 				local key_node = nil
@@ -200,6 +200,58 @@ local function _get_attrs_dict(fetch_node, bufnr)
 			vim.notify(err, vim.log.levels.WARN)
 		end
 		return nil, err
+	end
+end
+
+---@param bufnr integer
+---@param fetch_node TSNode
+---@param new_info table<string, string> must contain "rev" and "hash"
+function parse.update_buffer(bufnr, fetch_node, new_info)
+	---@type vim.treesitter.Query?, string?
+	local query, qry_err = vim.treesitter.query.parse("nix", cfg.queries.repo)
+	if not query then
+		---@type string
+		local err = "prefetch.parse.update_buffer() warning: Failed to parse repo ... " .. tostring(qry_err)
+		if cfg.debug then
+			vim.notify(err, vim.log.levels.WARN)
+		end
+		return nil, err
+	end
+
+	---@type table<integer, TSNode[]>
+	for _, match, _ in query:iter_matches(fetch_node, bufnr, 0, -1) do
+		---@type TSNode?
+		local key_node
+		---@type TSNode?
+		local value_node
+
+		---@type integer, TSNode
+		for id, nodes in pairs(match) do
+			---@type TSNode
+			local node = nodes[1]
+			---@type string
+			local name = query.captures[id]
+			if name == "key" then
+				key_node = node
+			elseif name == "value" then
+				value_node = node
+			end
+		end
+
+		if key_node and value_node then
+			---@type string
+			local key_text = ts.get_node_text(key_node, bufnr)
+			if key_text == "rev" or key_text == "hash" then
+				---@type string
+				local new_val = new_info[key_text]
+				if new_val then
+					new_val = '"' .. new_val .. '"'
+					---@type integer
+					local s_row, s_col, e_row, e_col = value_node:range()
+					vim.api.nvim_buf_set_text(bufnr, s_row, s_col, e_row, e_col, { new_val })
+				end
+			end
+		end
 	end
 end
 

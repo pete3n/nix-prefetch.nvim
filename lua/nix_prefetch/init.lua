@@ -121,68 +121,54 @@ end
 ---@param opts? table
 ---@return boolean updated, string? err
 function nix_prefetch.update(opts)
-  opts = opts or {}
+	opts = opts or {}
 
-  ---@type NPNodePair?, string?
-  local node_pair, np_err = parse.get_node_pair()
-  if not node_pair then
-    local err = "nix_prefetch.update() warning: Could not update ... " .. tostring(np_err)
-    if cfg.debug then
-      vim.notify(err, vim.log.levels.WARN)
-    end
-    return false, err
-  end
+	---@type NPNodePair?, string?
+	local node_pair, np_err = parse.get_node_pair()
+	if not node_pair then
+		local err = "nix_prefetch.update() warning: Could not update ... " .. tostring(np_err)
+		if cfg.debug then
+			vim.notify(err, vim.log.levels.WARN)
+		end
+		return false, err
+	end
 
-  ---@type integer
-  local bufnr = node_pair.node_with_range.bufnr
-  ---@type NPRange
-  local range = node_pair.node_with_range.range
-  ---@type GitTriplet?
-  local git_info = _create_git_info(node_pair.attrs_dict)
+	---@type integer
+	local bufnr = node_pair.node_with_range.bufnr
+	---@type GitTriplet?
+	local git_info = _create_git_info(node_pair.attrs_dict)
 
-  if not git_info then
-    ---@type string
-    local err = "nix_prefetch.update() error: Could not retrieve git info."
-    if cfg.debug then
-      vim.notify(err, vim.log.levels.ERROR)
-    end
-    return false, err
-  end
+	if not git_info then
+		---@type string
+		local err = "nix_prefetch.update() error: Could not retrieve git info."
+		if cfg.debug then
+			vim.notify(err, vim.log.levels.ERROR)
+		end
+		return false, err
+	end
 
-  vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
-  vim.notify("DEBUG: bufnr " .. bufnr)
-  vim.notify("DEBUG: range " .. vim.inspect(range))
-  vim.notify("DEBUG: git_info " .. vim.inspect(git_info))
+	vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
 
-  nix_prefetch._prefetch_git(git_info, opts, function(result)
-    vim.schedule(function()
-      if not result then
-        vim.notify("nix-prefetch-git failed to retrieve update info.", vim.log.levels.ERROR)
-        return
-      end
+	nix_prefetch._prefetch_git(git_info, opts, function(result)
+		if not result then
+			vim.notify("nix-prefetch-git failed to retrieve update info.", vim.log.levels.ERROR)
+			return
+		end
 
-      if not vim.api.nvim_buf_is_valid(bufnr) then
-        vim.notify("Buffer is no longer valid, cannot apply update.", vim.log.levels.WARN)
-        return
-      end
+		if not vim.api.nvim_buf_is_valid(bufnr) then
+			vim.notify("Buffer is no longer valid, cannot apply update.", vim.log.levels.WARN)
+			return
+		end
 
-      ---@type string[]
-      local new_lines = {}
-      for k, v in pairs(result) do
-        if k == "rev" or k == "hash" then
-          table.insert(new_lines, string.format('  %s = "%s";', k, v))
-        end
-      end
+		-- Schedule Treesitter-safe buffer update
+		vim.schedule(function()
+			local fetch_node = node_pair.node_with_range.node
+			parse.update_buffer(bufnr, fetch_node, result)
+			vim.notify("Nix prefetch updated: rev=" .. result.rev .. ", sha256=" .. result.sha256, vim.log.levels.INFO)
+		end)
+	end)
 
-      vim.api.nvim_buf_set_lines(bufnr, range.s_row, range.e_row + 1, false, new_lines)
-      vim.notify(
-        "Nix prefetch updated: rev=" .. result.rev .. ", sha256=" .. result.sha256,
-        vim.log.levels.INFO
-      )
-    end)
-  end)
-
-  return true, nil
+	return true, nil
 end
 
 return nix_prefetch
