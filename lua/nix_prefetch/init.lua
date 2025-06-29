@@ -2,7 +2,9 @@
 ---@brief
 --- Prefetch module provides primary nix-prefetch functions
 local nix_prefetch = {}
-local parse = require("nix_prefetch.parse")
+local parse  = require("nix_prefetch.parse")
+local types = require("nix_prefetch.types") -- adjust path if needed
+local GitForge = types.GitForge
 
 if vim.fn.exists(":checkhealth") == 2 then
 	require("nix_prefetch.health").check()
@@ -20,6 +22,40 @@ local function _create_url(git_info)
 	local url = protocol .. git_info.forge .. "/" .. git_info.owner .. "/" .. git_info.repo
 
 	return url, nil
+end
+
+---@private
+---@param attrs_dict table<string, string>
+---@return GitTriplet? git_info, string? err
+local function _create_git_info(attrs_dict)
+	---@type string, string
+	local owner, repo
+	---@type string, string
+	for key, val in pairs(attrs_dict) do
+		if key == "owner" then
+			owner = val
+		elseif key == "repo" then
+			repo = repo
+		end
+	end
+
+	if not owner and repo then
+		---@type string
+		local err = "nix_prefetch._create_git_info(): error repo or owner attributes not found."
+		if cfg.debug then
+			vim.notify(err, vim.log.levels.ERROR)
+		end
+		return nil, err
+	end
+
+	---@type GitTriplet
+	local git_info = {
+		forge = GitForge.GITHUB,
+		owner = owner,
+		repo = repo,
+	}
+
+	return git_info, nil
 end
 
 -- We need to pull the current repo to check for updated rev and hash info
@@ -94,19 +130,31 @@ function nix_prefetch.update(opts)
     return false, err
   end
 
+	---@type integer
   local bufnr = node_pair.node_with_range.bufnr
+	---@type NPRange
   local range = node_pair.node_with_range.range
-  local attrs = node_pair.attrs_dict
+	---@type GitTriplet?
+  local git_info = _create_git_info(node_pair.attrs_dict)
+
+	if not git_info then
+		---@type string
+		local err = "nix_prefetch.update() error: Could not retrieve git info."
+		if cfg.debug then
+			vim.notify(err, vim.log.levels.ERROR)
+		end
+		return false, err
+	end
 
   -- Optional: notify start
   vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
 
 	vim.notify("DEBUG: bufnr " .. bufnr)
 	vim.notify("DEBUG: range " .. vim.inspect(range))
-	vim.notify("DEBUG: attrs " .. vim.inspect(attrs))
+	vim.notify("DEBUG: git_info " .. vim.inspect(git_info))
 
   -- Start async git prefetch
-  nix_prefetch._prefetch_git(attrs, opts, function(result)
+  nix_prefetch._prefetch_git(git_info, opts, function(result)
     if not result then
       vim.notify("nix-prefetch-git failed to retrieve update info.", vim.log.levels.ERROR)
       return

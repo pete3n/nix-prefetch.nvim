@@ -30,13 +30,17 @@
 ---| "gitlab.com"
 
 ---@class GitForge
----@field GITHUB "github.com"
----@field GITLAB "gitlab.com"
+---@field GITHUB GitForgeType
+---@field GITLAB GitForgeType
+local GitForge = {
+	GITHUB = "github.com",
+	GITLAB = "gitlab.com",
+}
 
 ---@tag GitTriplet
 ---@class GitTriplet
 ---@brief Contains forge, owner, and repo information for git.
----@field forge GitForge
+---@field forge GitForgeType
 ---@field owner string
 ---@field repo string
 
@@ -45,3 +49,7 @@
 ---@brief Parameters to pass to nix-prefetch-git
 ---@field url string -- Any URL understood by 'git clone'
 ---@field rev string? -- Any sha1 or reference (such as refs/heads/master)
+
+return {
+	GitForge = GitForge,
+}
