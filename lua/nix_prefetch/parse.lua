@@ -183,6 +183,7 @@ local function _get_attrs_dict(fetch_node, bufnr)
 				if key_node and value_node then
 					local key_text = ts.get_node_text(key_node, bufnr)
 					local value_text = ts.get_node_text(value_node, bufnr)
+					value_text = value_text:match('^"(.-)"$') or value_text
 					attrs_dict[key_text] = value_text
 				end
 			end
