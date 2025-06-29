@@ -206,7 +206,7 @@ function parse.get_node_pair()
 
 	---@type table<string, string>?
 	local attrs_dict = _get_attrs_dict(node_with_range.node)
-	if not attrs_dict then
+	if not attrs_dict or attrs_dict == {} then
 		---@type string
 		local err = "nix_prefetch.parse.get_node_pair() warning: No attribute sets found."
 		if cfg.debug then
