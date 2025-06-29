@@ -174,7 +174,7 @@ local function _get_attrs_dict(fetch_node)
 		end
 	end
 
-	if attrs_dict then
+	if attrs_dict and attrs_dict ~= {} then
 		return attrs_dict, nil
 	else
 		---@type string
