@@ -28,6 +28,7 @@ end
 ---@param attrs_dict table<string, string>
 ---@return GitTriplet? git_info, string? err
 local function _create_git_info(attrs_dict)
+	vim.notify("DEBUG: attrs_dict info: \n" .. vim.inspect(attrs_dict))
 	---@type string, string
 	local owner, repo
 	---@type string, string
