@@ -165,6 +165,7 @@ local function _get_attrs_dict(fetch_node)
 		end
 
 		if key_node and value_node then
+			vim.notify("DEBUG: key\n" .. vim.inspect(key_node) .. "\nvalue\n" .. vim.inspect(value_node))
 			---@type string
 			local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
 			---@type string
