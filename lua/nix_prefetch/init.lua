@@ -2,7 +2,7 @@
 ---@brief
 --- Prefetch module provides primary nix-prefetch functions
 local nix_prefetch = {}
-local parse  = require("nix_prefetch.parse")
+local parse = require("nix_prefetch.parse")
 local types = require("nix_prefetch.types") -- adjust path if needed
 local GitForge = types.GitForge
 
@@ -28,7 +28,6 @@ end
 ---@param attrs_dict table<string, string>
 ---@return GitTriplet? git_info, string? err
 local function _create_git_info(attrs_dict)
-	vim.notify("DEBUG: attrs_dict info: \n" .. vim.inspect(attrs_dict))
 	---@type string, string
 	local owner, repo
 	---@type string, string
@@ -37,11 +36,11 @@ local function _create_git_info(attrs_dict)
 			owner = val
 		end
 		if key == "repo" then
-			repo = repo
+			repo = val
 		end
 	end
 
-	if not owner and repo then
+	if not owner or not repo then
 		---@type string
 		local err = "nix_prefetch._create_git_info(): error repo or owner attributes not found."
 		if cfg.debug then
@@ -98,8 +97,7 @@ function nix_prefetch._prefetch_git(git_info, opts, callback)
 
 	table.insert(cmd, url)
 
-	vim.system(cmd, { text = true, timeout = cfg.timeout or 5000
- }, function(obj)
+	vim.system(cmd, { text = true, timeout = cfg.timeout or 5000 }, function(obj)
 		if obj.code ~= 0 then
 			vim.notify("nix-prefetch-git failed for " .. url, vim.log.levels.ERROR)
 			callback(nil)
@@ -120,24 +118,24 @@ end
 ---@param opts? table
 ---@return boolean updated, string? err
 function nix_prefetch.update(opts)
-  opts = opts or {}
+	opts = opts or {}
 
-  ---@type NPNodePair?, string?
-  local node_pair, np_err = parse.get_node_pair()
-  if not node_pair then
-    local err = "nix_prefetch.update() warning: Could not update ... " .. tostring(np_err)
-    if cfg.debug then
-      vim.notify(err, vim.log.levels.WARN)
-    end
-    return false, err
-  end
+	---@type NPNodePair?, string?
+	local node_pair, np_err = parse.get_node_pair()
+	if not node_pair then
+		local err = "nix_prefetch.update() warning: Could not update ... " .. tostring(np_err)
+		if cfg.debug then
+			vim.notify(err, vim.log.levels.WARN)
+		end
+		return false, err
+	end
 
 	---@type integer
-  local bufnr = node_pair.node_with_range.bufnr
+	local bufnr = node_pair.node_with_range.bufnr
 	---@type NPRange
-  local range = node_pair.node_with_range.range
+	local range = node_pair.node_with_range.range
 	---@type GitTriplet?
-  local git_info = _create_git_info(node_pair.attrs_dict)
+	local git_info = _create_git_info(node_pair.attrs_dict)
 
 	if not git_info then
 		---@type string
@@ -148,41 +146,41 @@ function nix_prefetch.update(opts)
 		return false, err
 	end
 
-  -- Optional: notify start
-  vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
+	-- Optional: notify start
+	vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
 
 	vim.notify("DEBUG: bufnr " .. bufnr)
 	vim.notify("DEBUG: range " .. vim.inspect(range))
 	vim.notify("DEBUG: git_info " .. vim.inspect(git_info))
 
-  -- Start async git prefetch
-  nix_prefetch._prefetch_git(git_info, opts, function(result)
-    if not result then
-      vim.notify("nix-prefetch-git failed to retrieve update info.", vim.log.levels.ERROR)
-      return
-    end
+	-- Start async git prefetch
+	nix_prefetch._prefetch_git(git_info, opts, function(result)
+		if not result then
+			vim.notify("nix-prefetch-git failed to retrieve update info.", vim.log.levels.ERROR)
+			return
+		end
 
-    if not vim.api.nvim_buf_is_valid(bufnr) then
-      vim.notify("Buffer is no longer valid, cannot apply update.", vim.log.levels.WARN)
-      return
-    end
+		if not vim.api.nvim_buf_is_valid(bufnr) then
+			vim.notify("Buffer is no longer valid, cannot apply update.", vim.log.levels.WARN)
+			return
+		end
 
-    -- Format updated lines
-    local new_lines = {}
-    for k, v in pairs(result) do
-      if k == "rev" or k == "hash" then
-        table.insert(new_lines, string.format('  %s = "%s";', k, v))
-      end
-    end
+		-- Format updated lines
+		local new_lines = {}
+		for k, v in pairs(result) do
+			if k == "rev" or k == "hash" then
+				table.insert(new_lines, string.format('  %s = "%s";', k, v))
+			end
+		end
 
-    -- Replace range in buffer
-    vim.schedule(function()
-      vim.api.nvim_buf_set_lines(bufnr, range.s_row, range.e_row + 1, false, new_lines)
-      vim.notify("Nix prefetch updated: rev=" .. result.rev .. ", sha256=" .. result.sha256, vim.log.levels.INFO)
-    end)
-  end)
+		-- Replace range in buffer
+		vim.schedule(function()
+			vim.api.nvim_buf_set_lines(bufnr, range.s_row, range.e_row + 1, false, new_lines)
+			vim.notify("Nix prefetch updated: rev=" .. result.rev .. ", sha256=" .. result.sha256, vim.log.levels.INFO)
+		end)
+	end)
 
-  return true, nil
+	return true, nil
 end
 
 return nix_prefetch
