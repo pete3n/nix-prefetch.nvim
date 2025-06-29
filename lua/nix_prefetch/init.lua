@@ -106,7 +106,7 @@ function nix_prefetch.update(opts)
 	vim.notify("DEBUG: attrs " .. vim.inspect(attrs))
 
   -- Start async git prefetch
-  nix_prefetch.prefetch_git(attrs, opts, function(result)
+  nix_prefetch._prefetch_git(attrs, opts, function(result)
     if not result then
       vim.notify("nix-prefetch-git failed to retrieve update info.", vim.log.levels.ERROR)
       return
