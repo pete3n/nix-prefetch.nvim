@@ -175,6 +175,7 @@ local function _get_attrs_dict(fetch_node)
 	end
 
 	if attrs_dict and attrs_dict ~= {} then
+		vim.notify("DEBUG: _get_attrs_dict returning: " .. vim.inspect(attrs_dict))
 		return attrs_dict, nil
 	else
 		---@type string
