@@ -145,6 +145,17 @@ local function _get_attrs_dict(fetch_node)
 	end
 	---@cast query vim.treesitter.Query
 
+	---@type string?
+	local node_text = nil
+
+	local ok, result = pcall(vim.treesitter.get_node_text, fetch_node, buf)
+	if ok then
+		node_text = vim.trim(result)
+		vim.notify("TSNode text:\n" .. node_text)
+	else
+		vim.notify("Failed to extract node text: " .. result, vim.log.levels.ERROR)
+	end
+
 	---@type integer
 	local match_count = 0
 	---@type table<integer, TSNode[]>
