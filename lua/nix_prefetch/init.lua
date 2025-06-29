@@ -34,7 +34,8 @@ local function _create_git_info(attrs_dict)
 	for key, val in pairs(attrs_dict) do
 		if key == "owner" then
 			owner = val
-		elseif key == "repo" then
+		end
+		if key == "repo" then
 			repo = repo
 		end
 	end

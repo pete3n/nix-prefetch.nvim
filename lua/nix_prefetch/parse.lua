@@ -151,19 +151,16 @@ local function _get_attrs_dict(fetch_node, bufnr)
 		local child = fetch_node:child(i)
 
 		if not child then
-			vim.notify(string.format("  [%d] child is nil", i), vim.log.levels.WARN)
 			goto continue
 		end
-
 		---@cast child TSNode
+
 		local child_type = child:type()
-		local child_text = ts.get_node_text(child, bufnr)
-		vim.notify(string.format("  [%d] type = %s, text = %s", i, child_type, child_text), vim.log.levels.INFO)
+		--local child_text = ts.get_node_text(child, bufnr)
+		-- vim.notify(string.format("  [%d] type = %s, text = %s", i, child_type, child_text), vim.log.levels.INFO)
 
 		if child_type == "binding_set" then
-			for match_id, match, _ in attrs_query:iter_matches(child, bufnr, 0, -1) do
-				vim.notify("🔍 Match #" .. match_id .. "\n" .. vim.inspect(match), vim.log.levels.INFO)
-
+			for _, match, _ in attrs_query:iter_matches(child, bufnr, 0, -1) do
 				---@type TSNode|nil
 				local key_node = nil
 				---@type TSNode|nil
@@ -175,9 +172,7 @@ local function _get_attrs_dict(fetch_node, bufnr)
 					---@type string
 					local name = attrs_query.captures[id]
 
-					local node_text = ts.get_node_text(node, bufnr)
-					vim.notify(string.format("  Capture[%d] = %s, text = %s", id, name, node_text), vim.log.levels.INFO)
-
+					-- local node_text = ts.get_node_text(node, bufnr)
 					if name == "key" then
 						key_node = node
 					elseif name == "value" then
@@ -189,8 +184,6 @@ local function _get_attrs_dict(fetch_node, bufnr)
 					local key_text = ts.get_node_text(key_node, bufnr)
 					local value_text = ts.get_node_text(value_node, bufnr)
 					attrs_dict[key_text] = value_text
-				else
-					vim.notify("⚠️  Missing key or value node in match", vim.log.levels.WARN)
 				end
 			end
 		end
