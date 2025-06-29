@@ -157,15 +157,17 @@ local function _get_attrs_dict(fetch_node)
 		for i, node in ipairs(captures) do
 			---@type string
 			local capture_name = query.captures[i]
-			if capture_name == "key" then
+			if cfg.debug then
+				vim.notify(("Capture[%d] = %s, node = %s"):format(i, tostring(capture_name), node and "valid" or "nil"))
+			end
+			if node and capture_name == "key" then
 				key_node = node
-			elseif capture_name == "value" then
+			elseif node and capture_name == "value" then
 				value_node = node
 			end
 		end
 
 		if key_node and value_node then
-			vim.notify("DEBUG: key\n" .. vim.inspect(key_node) .. "\nvalue\n" .. vim.inspect(value_node))
 			---@type string
 			local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
 			---@type string
