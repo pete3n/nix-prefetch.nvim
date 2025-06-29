@@ -62,9 +62,12 @@ end
 -- We need to pull the current repo to check for updated rev and hash info
 ---@private
 ---@param git_info GitTriplet
----@param opts? table
+---@param opts? NPUpdateOpts
 ---@param callback fun(result: table<string, any>?): nil
 function nix_prefetch._prefetch_git(git_info, opts, callback)
+	---@type NPUpdateOpts
+	opts = opts or {}
+
 	---@type string?
 	local url, url_err = _create_url(git_info)
 	if not url then
@@ -75,9 +78,6 @@ function nix_prefetch._prefetch_git(git_info, opts, callback)
 		end
 		return nil, err
 	end
-
-	---@type table
-	opts = opts or {}
 
 	---@type string[]
 	local cmd = {
@@ -90,9 +90,9 @@ function nix_prefetch._prefetch_git(git_info, opts, callback)
 	if opts.fetchSubmodules ~= false then
 		table.insert(cmd, "--fetch-submodules")
 	end
-	if opts.rev then
+	if opts.branch then
 		table.insert(cmd, "--rev")
-		table.insert(cmd, "refs/heads/" .. opts.rev)
+		table.insert(cmd, "refs/heads/" .. opts.branch)
 	end
 
 	table.insert(cmd, url)
@@ -118,7 +118,7 @@ end
 ---@tag nix_prefetch.update()
 ---@brief Update a Nix src repository.
 ---
----@param opts? table
+---@param opts? NPUpdateOpts
 ---@return boolean updated, string? err
 function nix_prefetch.update(opts)
 	opts = opts or {}
