@@ -149,9 +149,8 @@ function nix_prefetch.update(opts)
 
 	vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
 
-	-- Schedule Treesitter-safe buffer update
-	vim.schedule(function()
-		nix_prefetch._prefetch_git(git_info, opts, function(result)
+	nix_prefetch._prefetch_git(git_info, opts, function(result)
+		vim.schedule(function()
 			if not result then
 				vim.notify("nix-prefetch-git failed to retrieve update info.", vim.log.levels.ERROR)
 				return
@@ -161,8 +160,10 @@ function nix_prefetch.update(opts)
 				vim.notify("Buffer is no longer valid, cannot apply update.", vim.log.levels.WARN)
 				return
 			end
+
 			local fetch_node = node_pair.node_with_range.node
 			parse.update_buffer(bufnr, fetch_node, result)
+
 			vim.notify("Nix prefetch updated: rev=" .. result.rev .. ", sha256=" .. result.sha256, vim.log.levels.INFO)
 		end)
 	end)
