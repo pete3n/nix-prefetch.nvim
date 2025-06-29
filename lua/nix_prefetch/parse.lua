@@ -161,8 +161,8 @@ local function _get_attrs_dict(fetch_node, bufnr)
 		vim.notify(string.format("  [%d] type = %s, text = %s", i, child_type, child_text), vim.log.levels.INFO)
 
 		if child_type == "binding_set" then
-			for match_id, match, _ in attrs_query:iter_matches(child, bufnr, child:start(), child:end_()) do
-				vim.notify("🔍 Match #" .. match_id, vim.log.levels.INFO)
+			for match_id, match, _ in attrs_query:iter_matches(child, bufnr, 0, -1) do
+				vim.notify("🔍 Match #" .. match_id .. "\n" .. vim.inspect(match), vim.log.levels.INFO)
 
 				---@type TSNode|nil
 				local key_node = nil
