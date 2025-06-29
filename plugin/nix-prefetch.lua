@@ -1,6 +1,0 @@
-vim.api.nvim_create_user_command("NPUpdateRepo", function()
-  require("nix-prefetch").update_repo_info(false)
-end, {})
-vim.api.nvim_create_user_command("NPUpdateHash", function()
-  require("nix-prefetch").update_repo_info(true)
-end, {})

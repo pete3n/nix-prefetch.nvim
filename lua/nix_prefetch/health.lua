@@ -1,3 +1,4 @@
+---@module "nix_prefetch.health"
 local health = require("vim.health")
 
 local M = {}
