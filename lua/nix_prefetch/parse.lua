@@ -125,6 +125,7 @@ local function _get_node_at_cursor()
 end
 
 ---@private
+--- Parses a Nix attribute set from a Treesitter node to a Lua dictionary.
 ---@param fetch_node TSNode
 ---@return table<string, string>? , string? err
 local function _get_attrs_dict(fetch_node)
@@ -133,76 +134,73 @@ local function _get_attrs_dict(fetch_node)
 
 	local query = vim.treesitter.query.parse("nix", cfg.queries.attrs)
 	if not query then
-		local err = "prefetch.parse._get_attrs_dict() warning: Could not parse attributes query."
+		local err = "prefetch.parse._get_attrs_dict() warning: Could not parse attributes."
 		if cfg.debug then
 			vim.notify(err, vim.log.levels.WARN)
 		end
 		return nil, err
 	end
 
+	-- Dump children of fetch_node for validation
 	if cfg.debug then
-		vim.notify("Children of fetch_node:")
-		local i = 0
-		for child in fetch_node:iter_children() do
-			if child and child:type() and vim.treesitter.get_node_text then
+		local child_count = fetch_node:named_child_count()
+		vim.notify("Children of fetch_node:", vim.log.levels.INFO)
+		for i = 0, child_count - 1 do
+			local child = fetch_node:named_child(i)
+			if child then
+				local child_text = vim.treesitter.get_node_text(child, buf)
 				vim.notify(
-					string.format(
-						"  [%d] type = %s, text = %s",
-						i,
-						child:type(),
-						vim.treesitter.get_node_text(child, buf)
-					)
+					string.format("  [%d] type = %s, text = %s", i, child:type(), child_text),
+					vim.log.levels.INFO
 				)
 			end
-			i = i + 1
 		end
 	end
 
-	for match_index, captures, _ in query:iter_matches(fetch_node, buf, 0, -1) do
-		vim.notify(string.format("🔍 Match #%d", match_index), vim.log.levels.INFO)
+	local match_count = 0
 
-		-- Dump raw captures table
-		for id, node in pairs(captures) do
-			local capture_name = query.captures[id]
-			local node_type = node and node:type() or "nil"
-			local node_text = node and vim.treesitter.get_node_text(node, buf) or "nil"
-			vim.notify(
-				string.format(
-					"  Capture[%d]: %s → type: %s | text: %s",
-					id,
-					capture_name or "nil",
-					node_type,
-					node_text
-				),
-				vim.log.levels.INFO
-			)
-		end
+	for match_id, captures, _ in query:iter_matches(fetch_node, buf, 0, -1) do
+		match_count = match_count + 1
+		vim.notify("🔍 Match #" .. match_id, vim.log.levels.INFO)
 
 		local key_node, value_node
+
 		for id, node in pairs(captures) do
-			local capture_name = query.captures[id]
-			if node and capture_name == "key" then
-				key_node = node
-			elseif node and capture_name == "value" then
-				value_node = node
+			if node then
+				local capture_name = query.captures[id]
+				vim.notify(
+					string.format("  Capture[%d] = %s, type = %s", id, capture_name, node:type()),
+					vim.log.levels.INFO
+				)
+
+				if capture_name == "key" then
+					key_node = node
+				elseif capture_name == "value" then
+					value_node = node
+				end
+			else
+				vim.notify("⚠️  Capture[" .. id .. "] was nil", vim.log.levels.WARN)
 			end
 		end
 
 		if key_node and value_node then
-			local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
-			local value_text = vim.trim(vim.treesitter.get_node_text(value_node, buf))
-			value_text = value_text:gsub('^"(.*)"$', "%1")
-			attrs_dict[key_text] = value_text
-			vim.notify(string.format("✅ Parsed pair: %s = %s", key_text, value_text), vim.log.levels.INFO)
+			local ok_key, key_text = pcall(vim.treesitter.get_node_text, key_node, buf)
+			local ok_val, value_text = pcall(vim.treesitter.get_node_text, value_node, buf)
+
+			if ok_key and ok_val then
+				key_text = vim.trim(key_text)
+				value_text = vim.trim(value_text):gsub('^"(.*)"$', "%1")
+				attrs_dict[key_text] = value_text
+				vim.notify(string.format("✅ Parsed: %s = %s", key_text, value_text), vim.log.levels.INFO)
+			else
+				vim.notify("❌ Failed to get node text for key or value", vim.log.levels.WARN)
+			end
 		else
 			vim.notify("⚠️  Missing key or value node in match", vim.log.levels.WARN)
 		end
 	end
 
 	if next(attrs_dict) ~= nil then
-		if cfg.debug then
-			vim.notify("DEBUG: _get_attrs_dict returning:\n" .. vim.inspect(attrs_dict))
-		end
 		return attrs_dict, nil
 	else
 		local err = "nix_prefetch.parse._get_attrs_dict() warning: No valid git attributes found."
