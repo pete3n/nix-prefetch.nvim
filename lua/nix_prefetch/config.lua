@@ -18,11 +18,11 @@ local default_config = {
 	]],
 
 		attrs = [[
-		((binding_set
-			(binding
-				(attrpath (identifier) @key)
-				(string_expression) @value))
-		 (#match? @key "^(owner|repo|rev|hash)$"))
+		(binding
+			(attrpath (identifier) @key)
+			(string_expression) @value
+		)
+		(#match? @key "^(owner|repo|rev|hash)$")
   ]],
 
 		repo = [[
