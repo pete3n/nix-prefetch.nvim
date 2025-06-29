@@ -18,11 +18,11 @@ local default_config = {
 	]],
 
 		attrs = [[
-    (binding
-      (attrpath (identifier) @key)
-      (string_expression) @value
-    )
-    (#match? @key "^(owner|repo|rev|hash)$")
+		((binding_set
+			(binding
+				(attrpath (identifier) @key)
+				(string_expression) @value))
+		 (#match? @key "^(owner|repo|rev|hash)$"))
   ]],
 
 		repo = [[
@@ -49,7 +49,6 @@ local default_config = {
 M.get_config = function()
 	return M.values or default_config
 end
-
 
 -- Always ensure at least the default_config exists.
 M.values = M.values or default_config
