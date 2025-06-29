@@ -166,10 +166,18 @@ local function _get_attrs_dict(fetch_node)
 		local key_node, value_node
 
 		for id, node in pairs(captures) do
+			local capture_name = query.captures[id]
 			if node then
-				local capture_name = query.captures[id]
+				local node_type = "<unknown>"
+				local ok, res = pcall(function()
+					return node:type()
+				end)
+				if ok then
+					node_type = res
+				end
+
 				vim.notify(
-					string.format("  Capture[%d] = %s, type = %s", id, capture_name, node:type()),
+					string.format("  Capture[%d] = %s, type = %s", id, capture_name, node_type),
 					vim.log.levels.INFO
 				)
 
@@ -179,7 +187,7 @@ local function _get_attrs_dict(fetch_node)
 					value_node = node
 				end
 			else
-				vim.notify("⚠️  Capture[" .. id .. "] was nil", vim.log.levels.WARN)
+				vim.notify("⚠️  Capture[" .. id .. "] (" .. capture_name .. ") was nil", vim.log.levels.WARN)
 			end
 		end
 
