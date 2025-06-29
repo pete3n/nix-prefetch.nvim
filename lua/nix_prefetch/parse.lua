@@ -129,102 +129,68 @@ end
 ---@param fetch_node TSNode
 ---@return table<string, string>? , string? err
 local function _get_attrs_dict(fetch_node)
-	---@type integer
-	local buf = vim.api.nvim_get_current_buf()
-	---@type table<string, string>
-	local attrs_dict = {}
+  local buf = vim.api.nvim_get_current_buf()
+  local attrs_dict = {}
 
-	---@type vim.treesitter.Query?
-	local query = vim.treesitter.query.parse("nix", cfg.queries.attrs)
-	if not query then
-		---@type string
-		local err = "prefetch.parse._get_attrs_dict() warning: Could not parse attributes."
-		if cfg.debug then
-			vim.notify(err, vim.log.levels.WARN)
-		end
-		return nil, err
-	end
-	---@cast query vim.treesitter.Query
+  local query = vim.treesitter.query.parse("nix", cfg.queries.attrs)
+  if not query then
+    local err = "prefetch.parse._get_attrs_dict() warning: Could not parse attributes."
+    if cfg.debug then vim.notify(err, vim.log.levels.WARN) end
+    return nil, err
+  end
 
-	vim.notify("Children of fetch_node:")
-	for i = 0, fetch_node:child_count() - 1 do
-		local c = fetch_node:child(i)
-		local c_type = c and c:type() or "nil"
-		local c_text = vim.treesitter.get_node_text(c, buf)
-		vim.notify(string.format("  [%d] type = %s, text = %s", i, c_type, vim.inspect(c_text)))
-	end
+  -- Find the binding_set node inside fetch_node
+  local binding_set_node = nil
+  for child in fetch_node:iter_children() do
+    if child:type() == "binding_set" then
+      binding_set_node = child
+      break
+    end
+  end
 
-	---@type integer
-	local match_count = 0
-	---@type table<integer, TSNode[]>
-	for _, captures, _ in query:iter_matches(fetch_node, buf, 0, -1) do
-		match_count = match_count + 1
-		vim.notify("Match #" .. match_count)
+  if not binding_set_node then
+    local err = "prefetch.parse._get_attrs_dict() error: No binding_set found in fetch_node"
+    if cfg.debug then vim.notify(err, vim.log.levels.WARN) end
+    return nil, err
+  end
 
-		---@type TSNode, TSNode
-		local key_node, value_node
-		---@type integer, TSNode
-		for id, node in pairs(captures) do
-			---@type string
-			local capture_name = query.captures[id]
-			local node_type = node and vim.treesitter.get_node_type(node) or "nil"
-			local node_text = "<invalid>"
-			local range_info = "<invalid>"
+  local match_count = 0
+  for match_id, captures, _ in query:iter_matches(binding_set_node, buf, 0, -1) do
+    match_count = match_count + 1
+    if cfg.debug then vim.notify("Match #" .. match_count) end
 
-			if node then
-				local ok, text_or_err = pcall(vim.treesitter.get_node_text, node, buf)
-				if ok then
-					node_text = text_or_err
-				end
+    local key_node, value_node
+    for id, node in pairs(captures) do
+      if node then
+        local name = query.captures[id]
+        local node_type = node:type()
+        local text = vim.treesitter.get_node_text(node, buf)
+        if cfg.debug then
+          vim.notify(string.format("Capture[%d] = %s (type = %s, text = %s)", id, name, node_type, text))
+        end
+        if name == "key" then key_node = node end
+        if name == "value" then value_node = node end
+      end
+    end
 
-				local ok_range, srow, scol = pcall(function()
-					local sr, sc, _, _ = node:range()
-					return sr, sc
-				end)
+    if key_node and value_node then
+      local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
+      local value_text = vim.trim(vim.treesitter.get_node_text(value_node, buf))
+      value_text = value_text:gsub('^"(.*)"$', "%1")  -- remove surrounding quotes
+      attrs_dict[key_text] = value_text
+    end
+  end
 
-				if ok_range then
-					range_info = string.format("[%d, %d]", srow, scol)
-				end
-			end
-
-			vim.notify(
-				string.format(
-					"  Capture[%d] = %s\n    Type = %s\n    Text = %s\n    Range = %s",
-					id,
-					capture_name or "nil",
-					node_type,
-					vim.inspect(node_text),
-					range_info
-				)
-			)
-
-			if node and capture_name == "key" then
-				key_node = node
-			elseif node and capture_name == "value" then
-				value_node = node
-			end
-		end
-
-		if key_node and key_node.range and value_node and value_node.range then
-			---@type string
-			local key_text = vim.trim(vim.treesitter.get_node_text(key_node, buf))
-			---@type string
-			local value_text = vim.trim(vim.treesitter.get_node_text(value_node, buf))
-			value_text = value_text:gsub('^"(.*)"$', "%1")
-			attrs_dict[key_text] = value_text
-		end
-	end
-
-	if next(attrs_dict) ~= nil then
-		return attrs_dict, nil
-	else
-		---@type string
-		local err = "nix_prefetch.parse._get_attrs_dict() warning: No valid git attributes found."
-		if cfg.debug then
-			vim.notify(err, vim.log.levels.WARN)
-		end
-		return nil, err
-	end
+  if next(attrs_dict) ~= nil then
+    if cfg.debug then
+      vim.notify("DEBUG: _get_attrs_dict returning:\n" .. vim.inspect(attrs_dict))
+    end
+    return attrs_dict, nil
+  else
+    local err = "nix_prefetch.parse._get_attrs_dict() warning: No valid git attributes found."
+    if cfg.debug then vim.notify(err, vim.log.levels.WARN) end
+    return nil, err
+  end
 end
 
 ---@tag parse.get_node_pair()
