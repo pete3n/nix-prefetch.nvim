@@ -8,6 +8,16 @@ local default_config = {
 	timeout = 5000,
 	queries = {
 		fetch = {
+			github = [[
+			(apply_expression
+				(select_expression
+					(attrpath (identifier) @fetchName
+						(#eq? @fetchName "fetchFromGitHub"))
+				)
+				(attrset_expression) @fetchBlock
+			)
+			]],
+
 			github_direct = [[
       (apply_expression
         function: (variable_expression
@@ -16,7 +26,7 @@ local default_config = {
         )
         argument: (attrset_expression) @fetchBlock
       )
-    ]],
+			]],
 
 			github_select = [[
       (apply_expression
@@ -29,7 +39,7 @@ local default_config = {
         )
         argument: (attrset_expression) @fetchBlock
       )
-    ]],
+			]],
 
 			gitlab = [[
       (apply_expression
@@ -39,7 +49,7 @@ local default_config = {
         )
         argument: (attrset_expression) @fetchBlock
       )
-    ]],
+			]],
 
 			tarball = [[
       (apply_expression
@@ -49,15 +59,16 @@ local default_config = {
         )
         argument: (attrset_expression) @fetchBlock
       )
-    ]],
+			]],
 		},
+
 		attrs = [[
 		(binding
 			(attrpath (identifier) @key)
 			(string_expression) @value
 		)
 		(#match? @key "^(owner|repo|rev|hash)$")
-  ]],
+		]],
 
 		repo = [[
     (binding
@@ -65,7 +76,7 @@ local default_config = {
       (string_expression) @value
     )
     (#match? @key "^(rev|hash)$")
-  ]],
+		]],
 
 		hash = [[
     (binding
@@ -73,7 +84,7 @@ local default_config = {
       (string_expression) @value
     )
     (#match? @key "^hash$")
-  ]],
+		]],
 	},
 }
 
