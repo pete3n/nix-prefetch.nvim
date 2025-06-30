@@ -27,8 +27,8 @@ supported format, this is the code block to include nix-prefetch.nvim in your Ni
       src = pkgs.fetchFromGitHub {
         owner = "pete3n";
         repo = "nix-prefetch.nvim";
-        rev = "44496fb3e706c795e87d475d674708919a01cbea";
-        hash = "sha256-tSDIGbTD+5fm1Qo3922DGJ1YIRNAUJF2btWf4kWbCoM=";
+				rev = "4f32441c3a7f550ccb8cbd73cba8ab11aa32f8d1";
+        hash = "sha256-FpUYNdyn3YrbrAWdkyeE7Kl/ThmSKBNl1l2ePjznKRc=";
       };
     })
   ];
