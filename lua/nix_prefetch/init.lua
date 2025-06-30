@@ -177,7 +177,10 @@ function nix_prefetch.update(opts)
 			vim.log.levels.INFO
 		)
 	else
-		vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
+		vim.notify(
+			"Fetching hash for default branch of repo:\n" .. tostring(git_info.owner) .. "\\" .. tostring(git_info.repo),
+			vim.log.levels.INFO
+		)
 	end
 
 	nix_prefetch._prefetch_git(git_info, opts, function(result)
