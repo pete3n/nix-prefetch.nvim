@@ -143,7 +143,7 @@ function nix_prefetch.update(opts)
 	end
 
 	---@type integer
-	local bufnr = node_pair.node_with_range.bufnr
+	local bufnr = node_pair.fetch_node.bufnr
 	---@type GitTriplet?
 	local git_info = _create_git_info(node_pair.attrs_dict)
 
@@ -195,7 +195,7 @@ function nix_prefetch.update(opts)
 				return
 			end
 
-			local fetch_node = node_pair.node_with_range.node
+			local fetch_node = node_pair.fetch_node.node
 			parse.update_buffer(bufnr, fetch_node, result)
 
 			vim.notify("Nix prefetch updated: \nrev=" .. result.rev .. "\nhash=" .. result.sha256, vim.log.levels.INFO)
