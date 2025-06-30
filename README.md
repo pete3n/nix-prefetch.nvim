@@ -44,7 +44,7 @@ nix-prefetch-git must be executable and available in your path. To confirm
 dependencies are availabe, nix-prefetch includes a health check function that 
 you can run from the nvim commandline with:
 ```
-    :checkhealth nix-prefetch
+    :checkhealth nix_prefetch
 ```
 
 ## Future Development
