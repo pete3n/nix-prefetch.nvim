@@ -96,18 +96,20 @@ function nix_prefetch._prefetch_git(git_info, opts, callback)
 	end
 	if opts.rev then
 		table.insert(cmd, "--rev")
-		table.insert(cmd .. opts.rev)
+		table.insert(cmd, opts.rev)
 	end
 
 	table.insert(cmd, url)
 
 	vim.system(cmd, { text = true, timeout = cfg.timeout or 5000 }, function(obj)
 		if obj.code ~= 0 then
-			vim.notify("nix-prefetch-git failed for " .. url, vim.log.levels.ERROR)
+			local err_msg = obj.stderr and vim.trim(obj.stderr) or "Unknown error"
+			vim.notify("nix-prefetch-git failed for " .. url .. ":\n" .. err_msg, vim.log.levels.ERROR)
 			callback(nil)
 			return
 		end
 
+		---@type boolean, table?
 		local ok, parsed = pcall(vim.json.decode, obj.stdout)
 		if not ok then
 			vim.notify("Failed to decode nix-prefetch-git output", vim.log.levels.ERROR)
@@ -156,12 +158,22 @@ function nix_prefetch.update(opts)
 
 	if opts.branch then
 		vim.notify(
-			"Fetching hash for head of repo: " .. tostring(git_info.repo) .. " branch: " .. opts.branch,
+			"Fetching hash for head of repo:\n"
+				.. tostring(git_info.owner)
+				.. "\\"
+				.. tostring(git_info.repo)
+				.. "\nbranch: "
+				.. opts.branch,
 			vim.log.levels.INFO
 		)
 	elseif opts.rev then
 		vim.notify(
-			"Fetching hash for head of repo: " .. tostring(git_info.repo) .. " rev: " .. opts.rev,
+			"Fetching hash for head of repo:\n"
+				.. tostring(git_info.owner)
+				.. "\\"
+				.. tostring(git_info.repo)
+				.. "\nrev: "
+				.. opts.rev,
 			vim.log.levels.INFO
 		)
 	else
