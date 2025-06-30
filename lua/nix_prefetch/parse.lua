@@ -7,28 +7,44 @@ local cfg = require("nix_prefetch.config").values
 local ts = vim.treesitter
 
 ---@private
---- Parse queries for fetch blocks.
---- TODO: Add support for other git sources
----@return vim.treesitter.Query? query, string? err
-local function _get_fetch_query()
-	---@type vim.treesitter.Query?, string?
-	local query, qry_err = vim.treesitter.query.parse("nix", cfg.queries.fetch_from_github)
-	if not query then
+--- Parse all fetch queries and return them as a table
+---@return table<string, vim.treesitter.Query>?, string?
+local function _get_fetch_queries()
+	---@type table<string, vim.treesitter.Query>
+	local queries = {}
+
+	---@type string, string
+	for name, query_str in pairs(cfg.queries.fetch or {}) do
+		local query, parse_err = vim.treesitter.query.parse("nix", query_str)
+		if not query then
+			---@type string
+			local err = "nix_prefetch.parse._get_fetch_queries() warning: Failed to parse fetch query for "
+				.. name
+				.. ": "
+				.. tostring(parse_err)
+			if cfg.debug then
+				vim.notify(err, vim.log.levels.WARN)
+			end
+		else
+			queries[name] = query
+		end
+	end
+
+	if vim.tbl_isempty(queries) then
 		---@type string
-		local err = "prefetch.parse.get_attrs() warning: Failed to parse fetchFromGitHub ... " .. tostring(qry_err)
+		local err = "nix_prefetch.parse._get_fetch_queries() error: No valid fetch queries parsed."
 		if cfg.debug then
-			vim.notify(err, vim.log.levels.WARN)
+			vim.notify(err, vim.log.levels.ERROR)
 		end
 		return nil, err
 	end
-	---@cast query vim.treesitter.Query
 
-	return query, nil
+	return queries, nil
 end
 
 ---@private
 --- Get the treesitter node at the cursor position
----@return NPNodeWithRange? node_with_range, string? err
+---@return NPFetchNode? fetch_node, string? err
 local function _get_node_at_cursor()
 	---@type boolean, integer?
 	local bufnr_ok, cur_bufnr = pcall(vim.api.nvim_get_current_buf)
@@ -62,12 +78,11 @@ local function _get_node_at_cursor()
 	---@type integer
 	local cur_col = cursor[2]
 
-	---@type vim.treesitter.Query?, string?
-	local query, attrs_err = _get_fetch_query()
-	if not query then
-		return nil, tostring(attrs_err)
+	---@type table<string, vim.treesitter.Query>?
+	local queries, fetch_err = _get_fetch_queries()
+	if not queries then
+		return nil, fetch_err
 	end
-	---@cast query vim.treesitter.Query
 
 	---@type vim.treesitter.LanguageTree?, string? parse_err
 	local parser, parse_err = vim.treesitter.get_parser(cur_bufnr, "nix")
@@ -95,30 +110,31 @@ local function _get_node_at_cursor()
 	---@type TSNode
 	local root = tree:root()
 
-	---@type integer, TSNode
-	for id, node, _ in query:iter_captures(root, cur_bufnr, 0, -1) do
-		---@type string
-		local capture_name = query.captures[id]
-		if capture_name == "fetchBlock" then
-			---@type integer
-			local s_row, s_col, e_row, e_col = node:range()
-			if
-				(cur_row > s_row or (cur_row == s_row and cur_col >= s_col))
-				and (cur_row < e_row or (cur_row == e_row and cur_col <= e_col))
-			then
-				---@type NPNodeWithRange
-				local node_with_range = {
-					bufnr = cur_bufnr,
-					node = node,
-					range = { s_row = s_row, s_col = s_col, e_row = e_row, e_col = e_col },
-				}
-				return node_with_range, nil
+	---@type string, vim.treesitter.Query
+	for query_name, query in pairs(queries) do
+		---@type integer, TSNode
+		for id, node, _ in query:iter_captures(root, cur_bufnr, 0, -1) do
+			if query.captures[id] == "fetchBlock" then
+				---@type integer
+				local s_row, s_col, e_row, e_col = node:range()
+				if
+					(cur_row > s_row or (cur_row == s_row and cur_col >= s_col))
+					and (cur_row < e_row or (cur_row == e_row and cur_col <= e_col))
+				then
+					return {
+						bufnr = cur_bufnr,
+						node = node,
+						range = { s_row = s_row, s_col = s_col, e_row = e_row, e_col = e_col },
+						query_name = query_name,
+					},
+						nil
+				end
 			end
 		end
 	end
 
 	---@type string
-	local err = "prefetch.parse.get_node_at_cursor() warning: No node found."
+	local err = "prefetch.parse.get_node_at_cursor() warning: No fetch block found at cursor."
 	if cfg.debug then
 		vim.notify(err, vim.log.levels.WARN)
 	end
@@ -261,10 +277,10 @@ end
 ---
 ---@return NPNodePair? node_pair, string? err
 function parse.get_node_pair()
-	---@type NPNodeWithRange?, string?
-	local node_with_range, get_nr_err = _get_node_at_cursor()
+	---@type NPFetchNode?, string?
+	local fetch_node, get_nr_err = _get_node_at_cursor()
 
-	if not node_with_range then
+	if not fetch_node then
 		---@type string
 		local err = "nix_prefetch.parse.get_node_pair() warning: No fetch node found." .. tostring(get_nr_err)
 		if cfg.debug then
@@ -272,10 +288,10 @@ function parse.get_node_pair()
 		end
 		return nil, err
 	end
-	---@cast node_with_range NPNodeWithRange
+	---@cast fetch_node NPFetchNode
 
 	---@type table<string, string>?
-	local attrs_dict = _get_attrs_dict(node_with_range.node, node_with_range.bufnr)
+	local attrs_dict = _get_attrs_dict(fetch_node.node, fetch_node.bufnr)
 	if not attrs_dict or attrs_dict == {} then
 		---@type string
 		local err = "nix_prefetch.parse.get_node_pair() warning: No attribute sets found."
@@ -287,7 +303,7 @@ function parse.get_node_pair()
 
 	---@type NPNodePair
 	local node_pair = {
-		node_with_range = node_with_range,
+		fetch_node = fetch_node,
 		attrs_dict = attrs_dict,
 	}
 
