@@ -2,9 +2,11 @@
 ---@brief
 --- Parsing functions for nix_prefetch
 
-local parse = {}
+---@type NPConfig
 local cfg = require("nix_prefetch.config").values
 local ts = vim.treesitter
+
+local parse = {}
 
 ---@private
 --- Parse all fetch queries and return them as a table
@@ -152,7 +154,7 @@ local function _get_attrs_dict(fetch_node, bufnr)
 	local attrs_dict = {}
 
 	---@type vim.treesitter.Query?
-	local attrs_query = vim.treesitter.query.parse("nix", cfg.queries.attrs)
+	local attrs_query = vim.treesitter.query.parse("nix", cfg.queries.attrs.all)
 	if not attrs_query then
 		local err = "nix_prefetch.parse._get_attrs_dict() warning: Could not parse attributes."
 		if cfg.debug then
@@ -224,7 +226,7 @@ end
 ---@param new_info table<string, string> must contain "rev" and "hash"
 function parse.update_buffer(bufnr, fetch_node, new_info)
 	---@type vim.treesitter.Query?, string?
-	local query, qry_err = vim.treesitter.query.parse("nix", cfg.queries.repo)
+	local query, qry_err = vim.treesitter.query.parse("nix", cfg.queries.attrs.all)
 	if not query then
 		---@type string
 		local err = "prefetch.parse.update_buffer() warning: Failed to parse repo ... " .. tostring(qry_err)

@@ -1,5 +1,16 @@
 ---@module "nix_prefetch.types"
 
+---@tag NPConfig
+---@brief Store nix_prefetch configuration data.
+---
+---@class NPConfig
+---@field debug boolean -- Provide debug notifications.
+---@field timeout integer -- Timeout in ms for nix-prefetch command to execute.
+---@field queries table<string, table<string, string>> -- Groups treesitter queries into
+--- tables by type of query.
+---@field query_metadata table<string, any> -- Metadata to store specific params
+--- for transforming parsed queries.
+
 ---@tag NPRange
 ---@class NPRange
 ---@brief Store range4 position coordinates.

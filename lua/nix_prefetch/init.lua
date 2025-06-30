@@ -3,8 +3,6 @@
 --- Prefetch module provides primary nix-prefetch functions
 local nix_prefetch = {}
 local parse = require("nix_prefetch.parse")
-local types = require("nix_prefetch.types") -- adjust path if needed
-local GitForge = types.GitForge
 
 if vim.fn.exists(":checkhealth") == 2 then
 	require("nix_prefetch.health").check()
@@ -26,8 +24,9 @@ end
 
 ---@private
 ---@param attrs_dict table<string, string>
+---@param query_name string
 ---@return GitTriplet? git_info, string? err
-local function _create_git_info(attrs_dict)
+local function _create_git_info(attrs_dict, query_name)
 	---@type string, string
 	local owner, repo
 	---@type string, string
@@ -51,7 +50,7 @@ local function _create_git_info(attrs_dict)
 
 	---@type GitTriplet
 	local git_info = {
-		forge = GitForge.GITHUB,
+		forge = cfg.query_metadata[query_name].forge,
 		owner = owner,
 		repo = repo,
 	}
@@ -145,7 +144,7 @@ function nix_prefetch.update(opts)
 	---@type integer
 	local bufnr = node_pair.fetch_node.bufnr
 	---@type GitTriplet?
-	local git_info = _create_git_info(node_pair.attrs_dict)
+	local git_info = _create_git_info(node_pair.attrs_dict, node_pair.fetch_node.query_name)
 
 	if not git_info then
 		---@type string

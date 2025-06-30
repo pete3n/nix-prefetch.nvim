@@ -1,11 +1,16 @@
 ---@module "nix_prefetch.config"
 
+local types = require("nix_prefetch.types")
 local M = {}
 
 ---@tag default_config
+---@type NPConfig
 local default_config = {
+	---@type boolean
 	debug = true,
+	---@type integer
 	timeout = 5000,
+	---@type table<string, table<string, string>>
 	queries = {
 		fetch = {
 			github = [[
@@ -61,30 +66,42 @@ local default_config = {
       )
 			]],
 		},
+		attrs = {
+			all = [[
+			(binding
+				(attrpath (identifier) @key)
+				(string_expression) @value
+			)
+			(#match? @key "^(owner|repo|rev|hash)$")
+			]],
 
-		attrs = [[
-		(binding
-			(attrpath (identifier) @key)
-			(string_expression) @value
-		)
-		(#match? @key "^(owner|repo|rev|hash)$")
-		]],
+			rev_hash = [[
+			(binding
+				(attrpath (identifier) @key)
+				(string_expression) @value
+			)
+			(#match? @key "^(rev|hash)$")
+			]],
 
-		repo = [[
-    (binding
-      (attrpath (identifier) @key)
-      (string_expression) @value
-    )
-    (#match? @key "^(rev|hash)$")
-		]],
-
-		hash = [[
-    (binding
-      (attrpath (identifier) @key)
-      (string_expression) @value
-    )
-    (#match? @key "^hash$")
-		]],
+			hash = [[
+			(binding
+				(attrpath (identifier) @key)
+				(string_expression) @value
+			)
+			(#match? @key "^hash$")
+			]],
+		}
+	},
+	---@type table<string, any>
+	query_metadata = {
+		github = {
+			---@type GitForgeType
+			forge = types.GitForge.GITHUB
+		},
+		gitlab = {
+			---@type GitForgeType
+			forge = types.GitForge.GITLAB
+		}
 	},
 }
 
