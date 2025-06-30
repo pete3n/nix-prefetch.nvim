@@ -40,7 +40,7 @@ current, updates the revision and the corresponding hash.
 
 ## Dependencies
 [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) must be installed.
-jq, and nix-prefetch-git must be executable and available in your path. To confirm
+nix-prefetch-git must be executable and available in your path. To confirm
 dependencies are availabe, nix-prefetch includes a health check function that 
 you can run from the nvim commandline with:
 ```
@@ -49,7 +49,7 @@ you can run from the nvim commandline with:
 
 ## Future Development
 - [x] fetchFromGitHub: update rev and hash
-    - [ ] fetchFromGithub: preserve rev, update hash
+    - [x] fetchFromGithub: preserve rev, update hash
     - [ ] sha256 attribute support
     - [ ] version tag interpretation/support
 - [ ] fetchFromGitLab support
