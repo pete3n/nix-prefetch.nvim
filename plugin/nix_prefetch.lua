@@ -53,6 +53,18 @@ vim.api.nvim_create_user_command("NixPrefetch", nix_prefetch_cmd, {
   end,
 })
 
+vim.keymap.set("n", "<Plug>(NixPrefetchUpdate)", function()
+  subcommand_tbl.update.impl()
+end, { noremap = true, silent = true })
+
+vim.keymap.set("n", "<Plug>(NixPrefetchUpdateBranch)", function()
+  subcommand_tbl.update_branch.impl()
+end, { noremap = true, silent = true })
+
+vim.keymap.set("n", "<Plug>(NixPrefetchUpdateRev)", function()
+  subcommand_tbl.update_rev.impl()
+end, { noremap = true, silent = true })
+
 ---@mod nix_prefetch-command USER COMMAND
 ---@brief :NixPrefetch <subcommand?>
 ---
