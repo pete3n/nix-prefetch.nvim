@@ -94,6 +94,10 @@ function nix_prefetch._prefetch_git(git_info, opts, callback)
 		table.insert(cmd, "--rev")
 		table.insert(cmd, "refs/heads/" .. opts.branch)
 	end
+	if opts.rev then
+		table.insert(cmd, "--rev")
+		table.insert(cmd .. opts.rev)
+	end
 
 	table.insert(cmd, url)
 
@@ -122,6 +126,9 @@ end
 ---@return boolean updated, string? err
 function nix_prefetch.update(opts)
 	opts = opts or {}
+	if opts.branch ~= nil and opts.rev ~= nil then
+		error("NPUpdateOpts: 'branch' and 'rev' are mutually exclusive. Please specify only one.")
+	end
 
 	---@type NPNodePair?, string?
 	local node_pair, np_err = parse.get_node_pair()
@@ -147,7 +154,19 @@ function nix_prefetch.update(opts)
 		return false, err
 	end
 
-	vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
+	if opts.branch then
+		vim.notify(
+			"Fetching hash for head of repo: " .. tostring(git_info.repo) .. " branch: " .. opts.branch,
+			vim.log.levels.INFO
+		)
+	elseif opts.rev then
+		vim.notify(
+			"Fetching hash for head of repo: " .. tostring(git_info.repo) .. " rev: " .. opts.rev,
+			vim.log.levels.INFO
+		)
+	else
+		vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
+	end
 
 	nix_prefetch._prefetch_git(git_info, opts, function(result)
 		vim.schedule(function()
@@ -164,7 +183,7 @@ function nix_prefetch.update(opts)
 			local fetch_node = node_pair.node_with_range.node
 			parse.update_buffer(bufnr, fetch_node, result)
 
-			vim.notify("Nix prefetch updated: rev=" .. result.rev .. ", sha256=" .. result.sha256, vim.log.levels.INFO)
+			vim.notify("Nix prefetch updated: \nrev=" .. result.rev .. "\nhash=" .. result.sha256, vim.log.levels.INFO)
 		end)
 	end)
 

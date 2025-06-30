@@ -52,6 +52,7 @@ local GitForge = {
 
 ---@class NPUpdateOpts
 ---@field branch? string
+---@field rev? string
 ---@field fetchSubmodules? boolean
 ---@field deepClone? boolean
 
