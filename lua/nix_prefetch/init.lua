@@ -62,9 +62,12 @@ end
 -- We need to pull the current repo to check for updated rev and hash info
 ---@private
 ---@param git_info GitTriplet
----@param opts? table
+---@param opts? NPUpdateOpts
 ---@param callback fun(result: table<string, any>?): nil
 function nix_prefetch._prefetch_git(git_info, opts, callback)
+	---@type NPUpdateOpts
+	opts = opts or {}
+
 	---@type string?
 	local url, url_err = _create_url(git_info)
 	if not url then
@@ -75,9 +78,6 @@ function nix_prefetch._prefetch_git(git_info, opts, callback)
 		end
 		return nil, err
 	end
-
-	---@type table
-	opts = opts or {}
 
 	---@type string[]
 	local cmd = {
@@ -90,20 +90,26 @@ function nix_prefetch._prefetch_git(git_info, opts, callback)
 	if opts.fetchSubmodules ~= false then
 		table.insert(cmd, "--fetch-submodules")
 	end
+	if opts.branch then
+		table.insert(cmd, "--rev")
+		table.insert(cmd, "refs/heads/" .. opts.branch)
+	end
 	if opts.rev then
 		table.insert(cmd, "--rev")
-		table.insert(cmd, "refs/heads/" .. opts.rev)
+		table.insert(cmd, opts.rev)
 	end
 
 	table.insert(cmd, url)
 
 	vim.system(cmd, { text = true, timeout = cfg.timeout or 5000 }, function(obj)
 		if obj.code ~= 0 then
-			vim.notify("nix-prefetch-git failed for " .. url, vim.log.levels.ERROR)
+			local err_msg = obj.stderr and vim.trim(obj.stderr) or "Unknown error"
+			vim.notify("nix-prefetch-git failed for " .. url .. ":\n" .. err_msg, vim.log.levels.ERROR)
 			callback(nil)
 			return
 		end
 
+		---@type boolean, table?
 		local ok, parsed = pcall(vim.json.decode, obj.stdout)
 		if not ok then
 			vim.notify("Failed to decode nix-prefetch-git output", vim.log.levels.ERROR)
@@ -118,10 +124,13 @@ end
 ---@tag nix_prefetch.update()
 ---@brief Update a Nix src repository.
 ---
----@param opts? table
+---@param opts? NPUpdateOpts
 ---@return boolean updated, string? err
 function nix_prefetch.update(opts)
 	opts = opts or {}
+	if opts.branch ~= nil and opts.rev ~= nil then
+		error("NPUpdateOpts: 'branch' and 'rev' are mutually exclusive. Please specify only one.")
+	end
 
 	---@type NPNodePair?, string?
 	local node_pair, np_err = parse.get_node_pair()
@@ -147,7 +156,32 @@ function nix_prefetch.update(opts)
 		return false, err
 	end
 
-	vim.notify("Fetching latest revision and hash...", vim.log.levels.INFO)
+	if opts.branch then
+		vim.notify(
+			"Fetching hash and rev for head of repo:\n"
+				.. tostring(git_info.owner)
+				.. "\\"
+				.. tostring(git_info.repo)
+				.. "\nbranch: "
+				.. opts.branch,
+			vim.log.levels.INFO
+		)
+	elseif opts.rev then
+		vim.notify(
+			"Fetching hash for repo:\n"
+				.. tostring(git_info.owner)
+				.. "\\"
+				.. tostring(git_info.repo)
+				.. "\nrev: "
+				.. opts.rev,
+			vim.log.levels.INFO
+		)
+	else
+		vim.notify(
+			"Fetching rev and hash for default branch of repo:\n" .. tostring(git_info.owner) .. "\\" .. tostring(git_info.repo),
+			vim.log.levels.INFO
+		)
+	end
 
 	nix_prefetch._prefetch_git(git_info, opts, function(result)
 		vim.schedule(function()
@@ -164,7 +198,7 @@ function nix_prefetch.update(opts)
 			local fetch_node = node_pair.node_with_range.node
 			parse.update_buffer(bufnr, fetch_node, result)
 
-			vim.notify("Nix prefetch updated: rev=" .. result.rev .. ", sha256=" .. result.sha256, vim.log.levels.INFO)
+			vim.notify("Nix prefetch updated: \nrev=" .. result.rev .. "\nhash=" .. result.sha256, vim.log.levels.INFO)
 		end)
 	end)
 

@@ -50,6 +50,12 @@ local GitForge = {
 ---@field url string -- Any URL understood by 'git clone'
 ---@field rev string? -- Any sha1 or reference (such as refs/heads/master)
 
+---@class NPUpdateOpts
+---@field branch? string
+---@field rev? string
+---@field fetchSubmodules? boolean
+---@field deepClone? boolean
+
 return {
 	GitForge = GitForge,
 }
