@@ -98,6 +98,14 @@ local default_config = {
 			---@type GitForgeType
 			forge = types.GitForge.GITHUB
 		},
+		github_direct = {
+			---@type GitForgeType
+			forge = types.GitForge.GITHUB
+		},
+		github_select = {
+			---@type GitForgeType
+			forge = types.GitForge.GITHUB
+		},
 		gitlab = {
 			---@type GitForgeType
 			forge = types.GitForge.GITLAB
